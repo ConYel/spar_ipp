@@ -21,5 +21,72 @@ suppressPackageStartupMessages({
 ```{r todate_of_analysis}
 todate <- format(Sys.time(), "%d_%b_%Y")
 ```
+## create the dir for the analysis
+```{r}
+my_exp <- "COLO205_IPP"
+dir.create(str_glue("./{my_exp}_analysis"))
+dat_path <- str_glue("{my_exp}_analysis")
+```
+
+## import data and make dataframe
+```{r create_the_df}
+path <- "/home/0/R_virtual_shared_folder/3_IPP_PIWIL1/SPAR_results"
+smallRNA_files <- dir(path, full.names = TRUE,
+                      pattern = "smRNA_gene_expression.xls",
+                      recursive = TRUE)
+# load the list of files in one table -----
+DT <- rbindlist(sapply(smallRNA_files,fread,
+                       simplify=FALSE,
+                       #select = c(1,2,4,6),
+                       verbose=getOption("datatable.verbose", TRUE)),
+                use.names= TRUE,idcol="file")  %>%
+  rename(smallRNA = "#Gene")
+
+# sep "smallRNA" column to multiple
+# separate("smallRNA",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") %>%
+#  as_tibble()
+
+# make matrix for DE analysis  -----
+dt <- DT %>% group_by(file) %>% select(-RPM) %>%
+  spread(key = "file", value = "ReadCount" )
+
+# clean the colnames
+names(dt)[3:length(names(dt))] <- names(dt)[3:length(names(dt))] %>%
+  str_remove(".+/3_IPP_PIWIL1/SPAR_results/") %>%
+  str_remove(".trimmed_.+") %>% 
+  str_remove(pattern = "COLO205_IPP_") %>%
+  str_remove(pattern = "noAb_")
+
+# create the targets object ----
+targets_file <- tibble(
+  sample_name = names(dt)[3:length(names(dt))],
+  group = as_factor(str_remove(names(dt)[3:length(names(dt))],"_.$")), 
+  batch = as_factor(str_remove(names(dt)[3:length(names(dt))],"^.+_"))
+)
+
+targ_path <- dir(path = path, 
+                 pattern = "Sra",
+                 full.names = T,
+                 recursive = TRUE)
+
+targets_file <- fread(targ_path) %>% 
+  as_tibble() %>% 
+  dplyr::select(Run, BioSample, classification, Instrument) %>% 
+  mutate_if(is.character, as_factor) 
+
+target <- match(names(dt)[3:length(names(dt))],targets_file$sample_name, nomatch = 0)
+tardt <- match(targets_file$Run, names(dt), nomatch = 0)
+#dt1 <- dt
+names(dt)[tardt] <- as.character(targets_file$samples[target])
+
+stopifnot(identical(targets_file$sample_name,names(dt)[3:length(names(dt))]))
+
+# write the results  -----
+dt %>% write_tsv(str_glue("{dat_path}/raw_reads_{todate}_{my_exp}_SPAR.txt"))
+```
+
+
+
+
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
