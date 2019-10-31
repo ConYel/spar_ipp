@@ -255,7 +255,7 @@ dev.off()
 #cpm_TMM <- cpm(x1_TMM,normalized.lib.sizes = TRUE, prior.count=5)
 
 ```
-# make h-clustering
+## make h-clustering
 ```{r Hierarchical clustering}
 norm_l <- list(
                "unorm" = cpm(edger_norm[[1]],normalized.lib.sizes = TRUE, log=TRUE, prior.count=5),
@@ -291,6 +291,7 @@ for (i in seq_along(l_hc)) {
 }
 dev.off()
 ```
+
 ## make MDS plot
 ```{r}
 par(mfrow=c(2,2))
@@ -325,7 +326,7 @@ suppressPackageStartupMessages(library(DESeq2))
 # make the Deseq dataset -----
 dds <- DESeqDataSetFromMatrix(countData = round(dgl_filt$counts),
                               colData = targets_file,
-                              design = ~ group )
+                              design = ~ batch + group )
 dds$group <- relevel(dds$group, ref = "Control")
 
 #vst -----
@@ -372,6 +373,214 @@ ggplot(mds, aes(x = `1`, y = `2`, color = group)) +
   geom_point(size = 3) + coord_fixed()
 
 ```
+## DE analysis 
+```{r}
+# DEseq2 ----
+dds <- DESeq(dds)
+res <- results(dds)
+summary(res)
+resultsNames(dds)
+
+DEseq2_res_C_Ab_vs_Control <- results(dds, name= "group_C_Ab_vs_Control", alpha = 0.05) %>% 
+  as_tibble(rownames = "GeneID") %>% 
+  arrange(padj) %>% 
+  write_tsv(str_glue("{dat_path}/DEseq2_C_Ab_vs_Ctl_{todate}_{my_exp}.txt"))
+
+DEseq2_res_N_Ab_vs_Control <- results(dds, name= "group_N_Ab_vs_Control", alpha = 0.05) %>% 
+  as_tibble(rownames = "GeneID") %>% 
+  arrange(padj) %>% 
+  write_tsv(str_glue("{dat_path}/DEseq2_N_Ab_vs_Ctl_{todate}_{my_exp}.txt"))
+
+DEseq2_res_INPUT_vs_Control <- results(dds, name= "group_INPUT_vs_Control", alpha = 0.05) %>% 
+  as_tibble(rownames = "GeneID") %>% 
+  arrange(padj) %>% 
+  write_tsv(str_glue("{dat_path}/DEseq2_INPUT_vs_Ctl_{todate}_{my_exp}.txt"))
+
+hist(DEseq2_res_C_Ab_vs_Control$pvalue[DEseq2_res_C_Ab_vs_Control$baseMean > 1], 
+     breaks = 0:20/20,
+     col = "grey50", border = "white")
+
+deseq2_p <- DEseq2_res_C_Ab_vs_Control %>% 
+  mutate(DEseq2 = if_else(
+    padj >= 0.05, 0, if_else(
+      log2FoldChange > 0, 1, -1
+    )
+  )) %>% 
+  select(smallRNA = "GeneID", DEseq2 )
+
+
+# region report for DEseq2 -----
+suppressPackageStartupMessages(library(regionReport))
+dir.create(str_glue("{dat_path}/DESeq2_report_{todate}"), recursive = TRUE)
+
+report <- DESeq2Report(dds, project = str_glue('DESeq2_{todate}_{my_exp}_HTML_report'),
+    intgroup = c('group'), outdir = str_glue("{dat_path}/DESeq2_report_{todate}"),
+    output = 'index', theme = theme_bw())
+# edgeR  ----
+edger_norm %>% names()
+plotMD(edger_norm[[4]],column = 3)
+plotMD(edger_norm[[4]],column = 4)
+x1_TMM <- estimateDisp(edger_norm[[2]], design=design, robust=TRUE)
+plotBCV(x1_TMM)
+fit <- glmQLFit(x1_TMM, design, robust = TRUE)
+head(fit$coefficients)
+plotQLDisp(fit)
+con_mat <- makeContrasts(
+  C_vs_Ctl = C_Ab - Control,
+  N_vs_Ctl = N_Ab - Control,
+  INPUT_vs_Ctl = INPUT - Control,
+  levels = design)
+
+edgeR_res_INPUT_vs_Ctl <- glmQLFTest(fit,contrast = con_mat[,"INPUT_vs_Ctl"])
+
+is.de <- decideTests(edgeR_res_INPUT_vs_Ctl)
+summary(is.de)
+topTags(edgeR_res_INPUT_vs_Ctl,n=10)$table 
+plotMD(edgeR_res_INPUT_vs_Ctl,
+       status = is.de,
+       values = c(1,-1),
+       col = c("red","blue"),
+       legend="topright")
+
+topedgeR_res_AD_vs_Control <- topTags(edgeR_res_AD_vs_Control, 
+                            n = nrow(edgeR_res_AD_vs_Control), 
+                            adjust.method = "BH", 
+                            sort.by = "PValue", 
+                            p.value = 1)$table %>% 
+  as_tibble(rownames = "smallRNA") %>% 
+  write_tsv(str_glue("{dat_path}/edgeR_res_AD_vs_Ctl_{todate}_{my_exp}.txt"))
+
+hist(topedgeR_res_AD_vs_Control$PValue, breaks = 0:20/20,
+     col = "grey50", border = "white")
+
+edgeR_p <- topedgeR_res_AD_vs_Control %>% 
+  mutate(edgeR = if_else(
+    FDR >= 0.05, 0, if_else(
+      logFC > 0, 1, -1
+    )
+  )) %>% 
+  select(smallRNA , edgeR )
+# region report for edgeR -----
+suppressPackageStartupMessages(library(regionReport))
+dir.create(str_glue("{dat_path}/edgeR_report_{todate}"), recursive = TRUE)
+
+report <- edgeReport(edger_norm[[3]], fit, project = str_glue('DESeq2_{todate}_{my_exp}_HTML_report'),
+    intgroup = c('group'), outdir = str_glue("{dat_path}/DESeq2_report_{todate}"),
+    output = 'index', theme = theme_linedraw())
+# voom  ----
+voomQW_norm %>% names
+vfit <- lmFit(voomQW_norm[[2]], design=design)
+vfit <- contrasts.fit(vfit,con_mat)
+efit <- eBayes(vfit,robust = TRUE)
+
+results <- decideTests(efit)
+a <- vennCounts(results)
+mfrow.old <- par()$mfrow
+par(mfrow=c(1,2))
+vennDiagram(a)
+vennDiagram(results, 
+    include=c("up", "down"),
+    counts.col=c("red", "blue"),
+    circle.col = c("red", "blue", "green3"))
+par(mfrow=mfrow.old)
+
+voom_res_C_vs_Ctl  <- topTable(efit,
+                             coef = "C_vs_Ctl",
+                             confint=TRUE,
+                             number = nrow(efit),
+                             adjust.method = "fdr",
+                             sort.by = "p") %>% 
+  as_tibble(rownames = "smallRNA") %>% 
+  write_tsv(str_glue("{dat_path}/voomQW_TMM_res_C_vs_Ctl_{todate}_{my_exp}.txt"))
+
+voom_res_N_vs_Ctl  <- topTable(efit,
+                             coef = "N_vs_Ctl",
+                             confint=TRUE,
+                             number = nrow(efit),
+                             adjust.method = "fdr",
+                             sort.by = "p") %>% 
+  as_tibble(rownames = "smallRNA") %>% 
+  write_tsv(str_glue("{dat_path}/voomQW_TMM_res_N_vs_Ctl_{todate}_{my_exp}.txt"))
+
+voom_res_INPUT_vs_Ctl  <- topTable(efit,
+                             coef = "INPUT_vs_Ctl",
+                             confint=TRUE,
+                             number = nrow(efit),
+                             adjust.method = "fdr",
+                             sort.by = "p") %>% 
+  as_tibble(rownames = "smallRNA")  %>% 
+  write_tsv(str_glue("{dat_path}/voomQW_TMM_res_INPUT_vs_Ctl_{todate}_{my_exp}.txt"))
+
+hist(toplvoom_res_AD_vs_Control$P.Value, 
+     breaks = 0:20/20,
+     col = "grey50", border = "white")
+
+voomQW_p <- voom_res_C_vs_Ctl %>% 
+  mutate(voomQW = if_else(
+    adj.P.Val >= 0.05, 0, if_else(
+      logFC > 0, 1, -1
+    )
+  )) %>% 
+  select(smallRNA , voomQW )
+
+# venn diagram for voom, DEseq2, edger -----
+ results <-  deseq2_p %>% 
+  inner_join(voomQW_p) %>% 
+  inner_join(edgeR_p) %>% select(-smallRNA)
+
+pdf(str_glue("{dat_path}/venn_diagram_DE_{todate}_{my_exp}.pdf"))
+vennDiagram(results, 
+    include=c("up", "down"),
+    counts.col=c("red", "blue"),
+    circle.col = c("red", "blue", "green3"))
+dev.off()
+# checking for DEs between both abs ------
+## voom ---
+C_IP <- voom_res_C_vs_Ctl %>% 
+  filter(adj.P.Val < 0.05,
+         logFC > 1.5) %>% 
+  rename_if(is.numeric,function(x){str_replace(x,"^","C_")})
+N_IP <- voom_res_N_vs_Ctl %>% 
+  filter(adj.P.Val < 0.05,
+         logFC > 1.5) %>% 
+  rename_if(is.numeric,function(x){str_replace(x,"^","N_")})
+INPUT_IP <- voom_res_INPUT_vs_Ctl %>% 
+  filter(adj.P.Val < 0.05,
+         logFC > 1.5) %>% 
+  rename_if(is.numeric,function(x){str_replace(x,"^","INPUT_")})
+
+INPUT_IP %>% inner_join(N_IP) %>% 
+  select(smallRNA)
+INPUT_IP %>% inner_join(C_IP) %>% 
+  select(smallRNA)
+
+voom_IPP <- C_IP %>% 
+  inner_join(N_IP) %>%
+  filter(!smallRNA %in% INPUT_IP$smallRNA) %>% 
+  select(smallRNA, C_logFC, C_adj.P.Val, N_logFC, N_adj.P.Val)
+
+## DEseq2 ---
+C_D2 <- DEseq2_res_C_Ab_vs_Control %>% 
+  filter(padj < 0.05,
+         log2FoldChange > 1.5) %>% 
+  rename_if(is.numeric,function(x){str_replace(x,"^","C_")})
+N_D2 <- DEseq2_res_N_Ab_vs_Control %>% 
+  filter(padj < 0.05,
+         log2FoldChange > 1.5) %>% 
+  rename_if(is.numeric,function(x){str_replace(x,"^","N_")})
+INPUT_D2 <- DEseq2_res_INPUT_vs_Control %>% 
+  filter(padj < 0.05,
+         log2FoldChange > 1.5) %>% 
+  rename_if(is.numeric,function(x){str_replace(x,"^","INPUT_")})
+
+INPUT_D2 %>% inner_join(C_D2) %>% select(GeneID)
+INPUT_D2 %>% inner_join(N_D2) %>% select(GeneID)
+DEseq_IPP <- C_D2 %>% 
+  inner_join(N_D2) %>%
+  filter(!GeneID %in% INPUT_D2$GeneID) %>% 
+  select(GeneID, C_log2FoldChange, C_padj, N_log2FoldChange, N_padj)
+```
+
 
 
 
