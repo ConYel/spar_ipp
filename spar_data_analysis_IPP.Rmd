@@ -584,8 +584,10 @@ DEseq_IPP <- C_D2 %>%
 ```{r}
 BiocManager::install("plyranges")
 library(plyranges)
+library(tidyverse)
+library(data.table)
 
-# toy samples taken/modified from BiocWorkshops/fluent-genomic-data-analysis-with-plyranges
+# toy samples taken/modified from BiocWorkshops/fluent-genomic-data-analysis-with-plyranges-----
     set.seed(42)
     pos <- sample(1:10000, size = 100)
     size <- sample(10:50, size = 100, replace = TRUE)
@@ -606,22 +608,86 @@ library(plyranges)
     rep5[c(10:30)] <- rep2[c(20:40)] %>% anchor_center() %>% mutate(width = width / 2)
     intensities <- bind_ranges(rep1, rep2, rep3, rep4, .id = "replicate") %>%
     arrange(start)
-    r1 <- intensities %>% group_by(strand,replicate) %>% reduce_ranges_directed() %>% as_tibble
-    r2 <- intensities %>% group_by(strand) %>%  reduce_ranges_directed() %>% as_tibble
-    r3 <- intensities %>% reduce_ranges_directed() %>% as_tibble
-    r4 <- intensities %>% group_by(strand,replicate) %>% reduce_ranges() %>% as_tibble
-    r5 <- intensities %>% group_by(strand) %>% reduce_ranges()%>% as_tibble
-    r6 <- intensities %>%  reduce_ranges()%>% as_tibble
+    r1 <- intensities %>% group_by(strand,replicate) %>% reduce_ranges_directed() %>% tibble::as_tibble()
+    r2 <- intensities %>% group_by(strand) %>%  reduce_ranges_directed() %>% tibble::as_tibble()
+    r3 <- intensities %>% reduce_ranges_directed() %>% tibble::as_tibble()
+    r4 <- intensities %>% group_by(strand,replicate) %>% reduce_ranges() %>% tibble::as_tibble()
+    r5 <- intensities %>% group_by(strand) %>% reduce_ranges()%>% tibble::as_tibble()
+    r6 <- intensities %>%  reduce_ranges()%>% tibble::as_tibble()
     sapply(list(r1,r2,r3,r4,r5,r6), nrow)
     identical(r2$end,r3$end)
 
     r3 <- intensities %>% reduce_ranges_directed()
-    rep1 <- rep1  %>%  select(rep_1_counts = "counts",everything()) %>% arrange(start)
-    rep2 <- rep2  %>%  select(rep_2_counts = "counts",everything()) %>% arrange(start)
+    rep1 <- rep1  %>%  select(rep_1_counts = "counts",dplyr::everything()) %>% arrange(start)
+    rep2 <- rep2  %>%  select(rep_2_counts = "counts",dplyr::everything()) %>% arrange(start)
     r3 %>% join_overlap_left_directed( rep1 ) %>% 
     mutate(rep_1_counts = replace_na(rep_1_counts,0)) %>%  
       join_overlap_left_directed( rep2 ) %>% 
       mutate(rep_2_counts = replace_na(rep_2_counts,0))
+
+    ans <- r3 %>% 
+  join_overlap_left_directed( rep1 ) %>%  
+  join_overlap_left_directed( rep2 ) %>% 
+  mutate(revmap = selfmatch(.)) %>%
+  dplyr::mutate_at(dplyr::vars(dplyr::starts_with('rep')), 
+                   function(.) ifelse (is.na(.), 0, .) 
+    ) %>% 
+  group_by(revmap) %>%
+  reduce_ranges_directed(
+    rep_1_counts = median(rep_1_counts, na.rm = TRUE),
+    rep_2_counts = median(rep_2_counts, na.rm = TRUE)
+  )
+# multiple chrs ----------------
+set.seed(420)
+seqnames <- rep(str_c("chr", 1:5),20) %>% sample(100, replace = TRUE)
+pos <- sample(1:10000, size = 100)
+size <- sample(10:50, size = 100, replace = TRUE)
+strand <- sample(c("+","-"), size = 100, replace = TRUE)
+rep1 <- data.frame(seqnames, 
+                   start = pos,
+                   width = size,
+                   strand =strand, 
+                   counts = round(rnorm(100, mean = 100,sd = 20)))
+rep1 <- as_granges(rep1) 
+isCircular(rep1) <- rep(FALSE,5)
+seqlengths(rep1) <- c("chr1" = 248956422, "chr2" = 242193529,
+                      "chr3" = 198295559, "chr4" = 190214555,
+                      "chr5" = 181538259)
+genome(rep1) <- "hg38"
+seqinfo(rep1)
+
+rep2 <- rep1 %>% anchor_center %>% mutate(width = width / 2, counts = counts + 100 ) %>% shift_downstream(8L)
+rep3 <- rep1 %>% shift_upstream(11L) %>% mutate(counts = counts / 2)
+rep4 <- rep3 %>% anchor_start() %>% mutate(width = width * 1.3, counts = counts + 1000 ) %>% shift_downstream(7L)
+rep4[c(1 , 50:70)] <- rep2[c(1, 50:70)] %>% shift_downstream(10L)
+rep5 <- rep4 %>% anchor_center() %>% mutate(width = width * 1.5)
+rep5[c(10:30)] <- rep2[c(20:40)] %>% anchor_center() %>% mutate(width = width / 2)
+intensities <- bind_ranges(rep1, rep2, rep3, rep4, .id = "replicate") %>%
+  arrange(start)
+r1 <- intensities %>% group_by(strand,seqnames) %>% reduce_ranges_directed() %>% tibble::as_tibble()
+r2 <- intensities %>% group_by(seqnames) %>%  reduce_ranges_directed() %>% tibble::as_tibble()
+r3 <- intensities %>% reduce_ranges_directed() %>% tibble::as_tibble()
+r4 <- intensities %>% group_by(strand,seqnames) %>% reduce_ranges() %>% tibble::as_tibble()
+r5 <- intensities %>% group_by(strand) %>% reduce_ranges()%>% tibble::as_tibble()
+r6 <- intensities %>%  reduce_ranges()%>% tibble::as_tibble()
+    sapply(list(r1,r2,r3,r4,r5,r6), nrow)
+    identical(r2$end,r3$end)    
+r3 <- intensities %>% reduce_ranges_directed() 
+rep1 <- rep1  %>% select(rep_1_counts = counts, dplyr::everything()) %>% arrange(start)
+rep2 <- rep2  %>% select(rep_2_counts = counts, dplyr::everything()) %>% arrange(start)
+
+ans <- r3 %>% 
+  join_overlap_left_directed( rep1 ) %>%  
+  join_overlap_left_directed( rep2 ) %>% 
+  mutate(revmap = selfmatch(.)) %>%
+  dplyr::mutate_at(dplyr::vars(dplyr::starts_with('rep')), 
+                   function(.) ifelse (is.na(.), 0, .) 
+    ) %>% 
+  group_by(revmap) %>%
+  reduce_ranges_directed(
+    rep_1_counts = median(rep_1_counts, na.rm = TRUE),
+    rep_2_counts = median(rep_2_counts, na.rm = TRUE)
+  )
 
 # real data ------
 path <- "/home/0/R_virtual_shared_folder/3_IPP_PIWIL1/SPAR_results"
@@ -653,9 +719,9 @@ genome(gr1) <- "hg38"
 t1 <- gr1 %>%  group_by(strand,samples_file) %>% 
   reduce_ranges_directed() %>% arrange(start)%>% as_tibble
 t2 <- arrange(gr1, start) %>% group_by(strand) %>% 
-  reduce_ranges_directed()%>% as_tibble
+  reduce_ranges_directed() %>% as_tibble
 t3 <- arrange(gr1, start) %>%  
-  reduce_ranges_directed()%>% as_tibble
+  reduce_ranges_directed() %>% as_tibble
 t4 <- arrange(gr1, start) %>% group_by(strand,samples_file) %>% 
   reduce_ranges()%>% as_tibble
 t5 <- arrange(gr1, start) %>% group_by(strand) %>% 
@@ -663,8 +729,17 @@ t5 <- arrange(gr1, start) %>% group_by(strand) %>%
 t6 <- arrange(gr1, start) %>% 
   reduce_ranges()%>% as_tibble
 sapply(list(t1,t2,t3,t4,t5,t6), nrow)
-identical(t2$start,t3$start)
+identical(t2$end,t3$end)
 
+test23 <- tibble(
+  Start_t2 = t2$start,
+  End_t2 = t2$end,
+  Start_t3 = t3$start,
+  End_t3 =  t3$end
+) %>% group_by(Start_t2,End_t2)%>% mutate(equal_ST = identical(as.numeric(Start_t2),as.numeric(Start_t3)),
+             equal_end = identical(End_t2,End_t3))
+test23 %>% group_by(equal_ST) %>% summarise(n())
+test23 %>% filter(equal_ST == FALSE)
 
 samples_granges <- gr1$samples_file %>% enframe %>%  distinct(value) %>% arrange(value) 
 l_samples_granges <- samples_granges$value %>% as.list()
@@ -681,7 +756,6 @@ C_Ab_2 <- gr1 %>% filter(samples_file == "C_Ab_2") %>%
   select(C_Ab_2_counts = "peakExpressionValue",everything())%>% arrange(start)
 C_Ab_3 <- gr1 %>% filter(samples_file == "C_Ab_3") %>% 
   select(C_Ab_3_counts = "peakExpressionValue",everything())%>% arrange(start)
-
 
 t3 %>% join_overlap_left_directed( C_Ab_1) %>% 
   mutate(C_Ab_1_counts = replace_na(C_Ab_1_counts,0)) %>% 
