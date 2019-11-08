@@ -681,7 +681,7 @@ ans <- r3 %>%
   join_overlap_left_directed( rep2 ) %>% 
   mutate(revmap = selfmatch(.)) %>%
   dplyr::mutate_at(dplyr::vars(dplyr::starts_with('rep')), 
-                   function(.) ifelse (is.na(.), 0, .) 
+                   function(.) ifelse (is.na(.), 0, .)
     ) %>% 
   group_by(revmap) %>%
   reduce_ranges_directed(
@@ -713,12 +713,13 @@ gr1 <- DT %>% select(samples_file:peakStrand) %>%
                          start = peakChrStart,
                          end = peakChrEnd,
                          strand = peakStrand) %>% arrange(start)
-seqlengths(gr1) <- 248956422
-genome(gr1) <- "hg38"
+sInfo <- Seqinfo(genome="hg38")
+seqlevels(sInfo) <- seqlevels(gr1)
+seqinfo(gr1)<- sInfo
 
 t1 <- gr1 %>%  group_by(strand,samples_file) %>% 
   reduce_ranges_directed() %>% arrange(start)%>% as_tibble
-t2 <- arrange(gr1, start) %>% group_by(strand) %>% 
+t2 <- arrange(gr1, start) %>% group_by(seqnames) %>% 
   reduce_ranges_directed() %>% as_tibble
 t3 <- arrange(gr1, start) %>%  
   reduce_ranges_directed() %>% as_tibble
@@ -744,28 +745,38 @@ test23 %>% filter(equal_ST == FALSE)
 samples_granges <- gr1$samples_file %>% enframe %>%  distinct(value) %>% arrange(value) 
 l_samples_granges <- samples_granges$value %>% as.list()
 
-grSamples <- lapply(l_samples_granges, function(x){
-  gr1  %>% filter(samples_file == x) %>% 
-  arrange(start)
-  names()}
+# make a list with samples names ---- 
+smpls_lst <- gr1 %>% as_tibble() %>% 
+  distinct(samples_file) %>% 
+  arrange(samples_file) %>% 
+  deframe() %>% 
+  as.list() %>% 
+  set_names(.)
+# rename the column for next applications
+grSamples_l <- map(smpls_lst, ~ gr1  %>% 
+      filter(samples_file == .x) %>% 
+      select(!!str_c(.x, "_peakExpr") := "peakExpressionValue",everything()))
+
+map
+# join each sample with the reduced Granges of all samples
+test1<- t3 %>% 
+  join_overlap_left_directed( grSamples_l[[1]]) %>% 
+  join_overlap_left_directed( grSamples_l[[2]]) %>% 
+  join_overlap_left_directed( grSamples_l[[3]]) %>% 
+  mutate(revmap = selfmatch(.)) %>%
+  dplyr::mutate_at(dplyr::vars(dplyr::ends_with('peakExpr')), 
+                   function(.) ifelse(is.na(.), 0, .)) %>% 
+  select(-starts_with("samples_file"))
+system.time( 
+  test1 <- test1 %>% 
+ # filter(seqnames == "chr1") %>%
+  group_by(revmap) %>% 
+  reduce_ranges_directed(
+    C_Ab_1_peakExpr = median(C_Ab_1_peakExpr, na.rm = TRUE),
+    C_Ab_2_peakExpr = median(C_Ab_2_peakExpr, na.rm = TRUE),
+    C_Ab_3_peakExpr = median(C_Ab_3_peakExpr, na.rm = TRUE))
 )
-
-C_Ab_1 <- gr1 %>% filter(samples_file == "C_Ab_1") %>% 
-  select(C_Ab_1_counts = "peakExpressionValue",everything()) %>% arrange(start)
-C_Ab_2 <- gr1 %>% filter(samples_file == "C_Ab_2") %>% 
-  select(C_Ab_2_counts = "peakExpressionValue",everything())%>% arrange(start)
-C_Ab_3 <- gr1 %>% filter(samples_file == "C_Ab_3") %>% 
-  select(C_Ab_3_counts = "peakExpressionValue",everything())%>% arrange(start)
-
-t3 %>% join_overlap_left_directed( C_Ab_1) %>% 
-  mutate(C_Ab_1_counts = replace_na(C_Ab_1_counts,0)) %>% 
-  select(-samples_file) %>% 
-  join_overlap_left_directed( C_Ab_2) %>% 
-  mutate(C_Ab_2_counts = replace_na(C_Ab_2_counts,0)) %>% 
-  select(-samples_file) %>% 
-  join_overlap_left_directed( C_Ab_3) %>% 
-  mutate(C_Ab_3_counts = replace_na(C_Ab_3_counts,0)) %>% 
-  select(-samples_file) 
+test1 %>% filter(revmap == 29100)
 ```
 
 
