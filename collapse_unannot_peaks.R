@@ -57,7 +57,20 @@ grSamples_l <- map(smpls_lst, ~ main_Grange  %>%
       filter(sample_file == .x) %>% 
       select(!!str_c(.x, "_peakExpr") := "peakExpressionValue",everything()))
 ## join each sample with the reduced Granges of all samples -----
-test_GR <- main_Grange  
+test_GR <- common_reduced_ranges  
+
+test_GR %>%
+#  group_by(rank, char_1, points) %>% 
+  list(.) %>% 
+  c(., grSamples_l) %>% 
+  purrr::reduce(join_overlap_left_directed) %>% 
+  mutate(revmap = selfmatch(.)) %>%
+  dplyr::mutate_at(dplyr::vars(dplyr::ends_with('peakExpr')), 
+                   function(.) ifelse(is.na(.), 0, .)) %>% 
+  select(-starts_with("sample_file"))
+  
+
+
   map(smpls_lst, ~ test_GR %>% 
   join_overlap_left_directed( grSamples_l[[.x]]))
       
@@ -65,7 +78,4 @@ test_GR <- main_Grange
   join_overlap_left_directed( grSamples_l[[1]]) %>% 
   join_overlap_left_directed( grSamples_l[[2]]) %>% 
   join_overlap_left_directed( grSamples_l[[3]]) %>% 
-  mutate(revmap = selfmatch(.)) %>%
-  dplyr::mutate_at(dplyr::vars(dplyr::ends_with('peakExpr')), 
-                   function(.) ifelse(is.na(.), 0, .)) %>% 
-  select(-starts_with("samples_file"))
+  
