@@ -741,10 +741,6 @@ test23 <- tibble(
              equal_end = identical(End_t2,End_t3))
 test23 %>% group_by(equal_ST) %>% summarise(n())
 test23 %>% filter(equal_ST == FALSE)
-
-samples_granges <- gr1$samples_file %>% enframe %>%  distinct(value) %>% arrange(value) 
-l_samples_granges <- samples_granges$value %>% as.list()
-
 # make a list with samples names ---- 
 smpls_lst <- gr1 %>% as_tibble() %>% 
   distinct(samples_file) %>% 
@@ -752,13 +748,14 @@ smpls_lst <- gr1 %>% as_tibble() %>%
   deframe() %>% 
   as.list() %>% 
   set_names(.)
-# rename the column for next applications
+# rename the column for next applications -----
 grSamples_l <- map(smpls_lst, ~ gr1  %>% 
       filter(samples_file == .x) %>% 
       select(!!str_c(.x, "_peakExpr") := "peakExpressionValue",everything()))
+# join each sample with the reduced Granges of all samples -----
+t3 <- arrange(gr1, start) %>%  
+  reduce_ranges_directed()
 
-map
-# join each sample with the reduced Granges of all samples
 test1 <- t3 %>% 
   join_overlap_left_directed( grSamples_l[[1]]) %>% 
   join_overlap_left_directed( grSamples_l[[2]]) %>% 
@@ -771,38 +768,26 @@ test1 <- t3 %>%
 my_reduced_Granges <- test1 %>% 
   group_by(revmap) %>% 
   reduce_ranges_directed
-my_median <- test1 %>% select(C_Ab_1_peakExpr, revmap) %>% as_tibble() %>% group_by(revmap) %>% 
+
+my_median <- test1 %>% select(C_Ab_1_peakExpr, revmap) %>% 
+  as_tibble() %>% group_by(revmap) %>% 
   summarize(C_Ab_1_peakExpr = median(C_Ab_1_peakExpr, na.rm = TRUE))
 
 my_1st_med <- my_reduced_Granges %>% 
   as_tibble() %>% 
   inner_join(my_median) %>% as_granges()
 
-system.time( 
-  test1 <- test1 %>% 
- # filter(seqnames == "chr1") %>%
-  group_by(revmap) %>% 
-  reduce_ranges_directed(
-    C_Ab_1_peakExpr = median(C_Ab_1_peakExpr, na.rm = TRUE),
-    C_Ab_2_peakExpr = median(C_Ab_2_peakExpr, na.rm = TRUE),
-    C_Ab_3_peakExpr = median(C_Ab_3_peakExpr, na.rm = TRUE))
-)
-
- 
   test2 <- test1 %>% 
- filter(seqnames == "chr1") %>%
+ filter(seqnames == "chr3_KI270895v1_alt") %>%
   group_by(revmap) %>% 
   reduce_ranges_directed(
     C_Ab_1_peakExpr = median(C_Ab_1_peakExpr, na.rm = TRUE),
     C_Ab_2_peakExpr = median(C_Ab_2_peakExpr, na.rm = TRUE),
     C_Ab_3_peakExpr = median(C_Ab_3_peakExpr, na.rm = TRUE))
 test1 %>% filter(revmap == 29100)
-result_med_sliced <- my_1st_med %>% filter(seqnames == "chr1") %>% as_tibble() %>% select(revmap,C_Ab_1_peakExpr)
+result_med_sliced <- my_1st_med %>% filter(seqnames == "chr3_KI270895v1_alt") %>% as_tibble() %>% select(revmap,C_Ab_1_peakExpr)
 result_med_test2 <-  test2 %>% as_tibble() %>% select(revmap,C_Ab_1_peakExpr)
 identical(result_med_sliced,result_med_test2)
 ```
-
-
-
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
