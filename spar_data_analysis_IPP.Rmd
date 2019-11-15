@@ -30,7 +30,7 @@ dat_path <- str_glue("{my_exp}_analysis")
 
 ## import data and make dataframe
 ```{r create_the_df}
-path <- "/home/0/R_virtual_shared_folder/3_IPP_PIWIL1/SPAR_results"
+path <- "/home/0/Project_piRNA/3_IPP_COLO205_SPAR_results/"
 smallRNA_files <- dir(path, full.names = TRUE,
                       pattern = "smRNA_gene_expression.xls",
                       recursive = TRUE)
@@ -690,7 +690,7 @@ ans <- r3 %>%
   )
 
 # real data ------
-path <- "/home/0/R_virtual_shared_folder/3_IPP_PIWIL1/SPAR_results"
+path <- "/home/0/Project_piRNA/3_IPP_COLO205_SPAR_results/"
 smallRNA_files <- dir(path, full.names = TRUE,
                       pattern = "peaks_unannot.with_con.+.xls",
                       recursive = TRUE)
@@ -755,7 +755,7 @@ grSamples_l <- map(smpls_lst, ~ gr1  %>%
 # join each sample with the reduced Granges of all samples -----
 t3 <- arrange(gr1, start) %>%  
   reduce_ranges_directed()
-
+  
 test1 <- t3 %>% 
   join_overlap_left_directed( grSamples_l[[1]]) %>% 
   join_overlap_left_directed( grSamples_l[[2]]) %>% 
