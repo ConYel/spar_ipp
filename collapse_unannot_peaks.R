@@ -13,7 +13,7 @@ todate <- format(Sys.time(), "%d_%b_%Y")
 #dir.create(str_glue("./{my_exp}_analysis"))
 #dat_path <- str_glue("{my_exp}_analysis")
 # import data ------
-path <- "/home/0/Project_piRNA/3_IPP_COLO205_SPAR_results/"
+path <- "/home/0/Project_piRNA/3_IPP_COLO205_SPAR_results"
 smallRNA_files <- dir(path, full.names = TRUE,
                       pattern = "peaks_unannot.with_con.+.xls",
                       recursive = TRUE)
@@ -59,33 +59,49 @@ grSamples_l <- map(smpls_lst, ~ main_Grange  %>%
       select(!!str_c(.x, "_peakExpr") := "peakExpressionValue",everything()))
 ## join each sample with the reduced Granges of all samples -----
 test_GR <- common_reduced_ranges  
-
-common_reduced_ranges %>% 
+##################################
+test1 <- common_reduced_ranges %>% 
   join_overlap_left_directed( grSamples_l[[1]]) %>% 
   join_overlap_left_directed( grSamples_l[[2]]) %>% 
   join_overlap_left_directed( grSamples_l[[3]]) %>% 
-  join_overlap_left_directed( grSamples_l[[4]]) %>% 
-  join_overlap_left_directed( grSamples_l[[5]]) %>% 
-  join_overlap_left_directed( grSamples_l[[6]]) %>% 
-  join_overlap_left_directed( grSamples_l[[7]]) %>% 
-  join_overlap_left_directed( grSamples_l[[8]]) %>%
-  join_overlap_left_directed( grSamples_l[[9]]) %>% 
-  join_overlap_left_directed( grSamples_l[[10]]) %>% 
-  join_overlap_left_directed( grSamples_l[[11]]) %>% 
-  join_overlap_left_directed( grSamples_l[[12]]) %>% 
   mutate(revmap = selfmatch(.)) %>%
   dplyr::mutate_at(dplyr::vars(dplyr::ends_with('peakExpr')), 
                    function(.) ifelse(is.na(.), 0, .)) %>% 
   select(-starts_with("samples_file"))
+
+
+
+test2 <- test1 %>% 
+  group_by(revmap) %>% 
+  reduce_ranges_directed(
+    C_Ab_1_peakExpr = median(C_Ab_1_peakExpr, na.rm = TRUE),
+    C_Ab_2_peakExpr = median(C_Ab_2_peakExpr, na.rm = TRUE),
+    C_Ab_3_peakExpr = median(C_Ab_3_peakExpr, na.rm = TRUE))
+
+#########################################################################
 test_GR <- test_GR %>%
-#  group_by(rank, char_1, points) %>% 
   list(.) %>% 
   c(., grSamples_l) %>% 
   purrr::reduce(join_overlap_left_directed) %>% 
-  mutate(revmap = selfmatch(.)) %>%
+  mutate(unannot_peak = selfmatch(.)) %>%
   dplyr::mutate_at(dplyr::vars(dplyr::ends_with('peakExpr')), 
                    function(.) ifelse(is.na(.), 0, .)) %>% 
-  select(-starts_with("sample_file"))
+  select(-starts_with("sample_file")) %>% 
+  group_by(unannot_peak)
 
-  map(smpls_lst, ~ test_GR %>% 
-  join_overlap_left_directed( grSamples_l[[.x]]))
+my_reduced_Granges <- test_GR  %>% 
+  reduce_ranges_directed
+
+my_medianL <- map(smpls_lst, ~test_GR %>% 
+      select(!!str_c(.x, "_peakExpr"), unannot_peak) %>% 
+      as_tibble() %>% 
+      group_by(unannot_peak) %>% 
+      summarize(!!str_c(.x, "_peakExpr") := median(.data[[!!str_c(.x, "_peakExpr")]], na.rm = TRUE)))
+
+my_medianL <- my_medianL %>%
+  purrr::reduce(inner_join)
+
+my_unAnnot_GR <- my_reduced_Granges %>% 
+  as_tibble() %>% 
+  inner_join(my_medianL) %>% 
+  as_granges()
