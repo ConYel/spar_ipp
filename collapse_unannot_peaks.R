@@ -8,8 +8,7 @@ library(data.table, quietly = TRUE)
 ## add todate ----
 todate <- format(Sys.time(), "%d_%b_%Y")
 ## create the dir for the analysis -----
-
-#my_exp <- "COLO205_IPP"
+#my_exp <- "whatever"
 #dir.create(str_glue("./{my_exp}_analysis"))
 #dat_path <- str_glue("{my_exp}_analysis")
 # import data ------
@@ -79,34 +78,52 @@ my_medianL <- map(smpls_lst, ~common_reduced_ranges %>%
 
 my_medianL <- my_medianL %>%
   purrr::reduce(inner_join)
-# make the final Granges Obect -----
+## make the final Granges Obect -----
 my_unAnnot_GR <- my_reduced_Granges %>% 
   as_tibble() %>% 
-  inner_join(my_medianL) %>% 
+  inner_join(my_medianL) %>%
+  mutate(unannot_peak = unannot_peak %>% 
+           str_c("peak_",.)) %>% 
   as_granges() %>% 
   write_rds("unannot_peak_Ranges.rds")
-# 
-path <- "/mnt/NFS_SHARE_20/TNBC_smallRNA/SPAR_out/Results_ge/"
-smallRNA_files <- list.files(path,pattern = ".xls")
-smallRNA_files <- str_glue("{path}{smallRNA_files}")
-#load the list of files in one table
-DT <- rbindlist(sapply(smallRNA_files,fread,
+## create the collapsed matrix of annotated -----
+path 
+smallRNA_files <- smallRNA_files <- dir(path, full.names = TRUE,
+                                        pattern = "smRNA_gene_expression.xls",
+                                        recursive = TRUE)
+### load the list of files in one table -----
+DT <- rbindlist(sapply(smallRNA_files, fread,
                        simplify=FALSE,
-                       #select = c(1,2,4,6),
                        verbose=getOption("datatable.verbose", TRUE)),
-                use.names= TRUE,idcol="file")  %>%
-  rename(smallRNA = "#Gene")
-
-#sep first column to multiple
+                use.names= TRUE, idcol="sample_file")  %>%
+  rename(smallRNA = "#Gene") %>% 
+  select(-RPM) %>% 
+  as_tibble() %>% 
+  mutate(sample_file = sample_file %>% 
+           str_remove(".trimmed_.+") %>% 
+           str_remove(".+/")
+           )
+### separate first column to multiple ----
 #separate("#Gene",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") %>% 
 #as_tibble()
-#make matrix for DE analysis
-dt <- DT %>% group_by(file) %>% select(-RPM) %>%
-  spread(key = "file", value = "ReadCount" ) 
+#DT <- DT %>% 
+#  str_remove(".+SPAR_results/") %>%
+#  str_remove(".trimmed_.+") %>%
+#  str_remove(pattern = "COLO205_IPP_") %>%
+#  str_remove(pattern = "noAb_")
 
-# clean the colnames
-names(dt) <- basename(names(dt)) %>% str_remove(".xls")
-
-
-#dt <- dt %>% separate("smallRNA",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") 
-
+### make matrix for DE analysis -----
+dt <- DT %>% 
+  group_by(sample_file) %>% 
+  spread(key = "sample_file", value = "ReadCount" ) %>% 
+  rename(Peaks_GeneClass = "GeneClass")
+# collapse not annot and annot in one matrix ----
+my_unAnnot_GR <- my_unAnnot_GR %>% 
+  as_tibble() %>% 
+  unite(smallRNA,seqnames:strand, sep = "_") %>% 
+  rename(Peaks_GeneClass = "unannot_peak")
+print("are the name identical?")
+identical(names(my_unAnnot_GR),names(dt))
+all_peaks_smRNAs <- dt[names(my_unAnnot_GR)] %>% 
+  bind_rows(my_unAnnot_GR) %>% 
+  write_tsv("all_peaks_smRNAs.txt")
