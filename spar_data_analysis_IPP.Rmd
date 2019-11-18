@@ -768,7 +768,26 @@ test1 <- t3 %>%
 my_reduced_Granges <- test1 %>% 
   group_by(revmap) %>% 
   reduce_ranges_directed
-
+##################################
+test1 <- common_reduced_ranges %>% 
+  join_overlap_left_directed( grSamples_l[[1]]) %>% 
+  join_overlap_left_directed( grSamples_l[[2]]) %>% 
+  join_overlap_left_directed( grSamples_l[[3]]) %>% 
+  mutate(revmap = selfmatch(.)) %>%
+  dplyr::mutate_at(dplyr::vars(dplyr::ends_with('peakExpr')), 
+                   function(.) ifelse(is.na(.), 0, .)) %>% 
+  select(-starts_with("samples_file"))
+test2 <- test1 %>% 
+  group_by(revmap) %>% 
+  reduce_ranges_directed(
+    C_Ab_1_peakExpr = median(C_Ab_1_peakExpr, na.rm = TRUE),
+    C_Ab_2_peakExpr = median(C_Ab_2_peakExpr, na.rm = TRUE),
+    C_Ab_3_peakExpr = median(C_Ab_3_peakExpr, na.rm = TRUE))
+num_1 <- test2 %>% select(C_Ab_1_peakExpr, C_Ab_2_peakExpr, C_Ab_3_peakExpr)
+num_2 <- my_unAnnot_GR %>% select(C_Ab_1_peakExpr, C_Ab_2_peakExpr, C_Ab_3_peakExpr)
+identical(num_1, num_2)
+identical(as_tibble(num_1), as_tibble(num_2))
+#########################################################################
 my_median <- test1 %>% select(C_Ab_1_peakExpr, revmap) %>% 
   as_tibble() %>% group_by(revmap) %>% 
   summarize(C_Ab_1_peakExpr = median(C_Ab_1_peakExpr, na.rm = TRUE))

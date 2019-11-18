@@ -58,28 +58,7 @@ grSamples_l <- map(smpls_lst, ~ main_Grange  %>%
       filter(sample_file == .x) %>% 
       select(!!str_c(.x, "_peakExpr") := "peakExpressionValue",everything()))
 ## join each sample with the reduced Granges of all samples -----
-test_GR <- common_reduced_ranges  
-##################################
-test1 <- common_reduced_ranges %>% 
-  join_overlap_left_directed( grSamples_l[[1]]) %>% 
-  join_overlap_left_directed( grSamples_l[[2]]) %>% 
-  join_overlap_left_directed( grSamples_l[[3]]) %>% 
-  mutate(revmap = selfmatch(.)) %>%
-  dplyr::mutate_at(dplyr::vars(dplyr::ends_with('peakExpr')), 
-                   function(.) ifelse(is.na(.), 0, .)) %>% 
-  select(-starts_with("samples_file"))
-
-
-
-test2 <- test1 %>% 
-  group_by(revmap) %>% 
-  reduce_ranges_directed(
-    C_Ab_1_peakExpr = median(C_Ab_1_peakExpr, na.rm = TRUE),
-    C_Ab_2_peakExpr = median(C_Ab_2_peakExpr, na.rm = TRUE),
-    C_Ab_3_peakExpr = median(C_Ab_3_peakExpr, na.rm = TRUE))
-
-#########################################################################
-test_GR <- test_GR %>%
+common_reduced_ranges <- common_reduced_ranges %>%
   list(.) %>% 
   c(., grSamples_l) %>% 
   purrr::reduce(join_overlap_left_directed) %>% 
@@ -89,10 +68,10 @@ test_GR <- test_GR %>%
   select(-starts_with("sample_file")) %>% 
   group_by(unannot_peak)
 
-my_reduced_Granges <- test_GR  %>% 
+my_reduced_Granges <- common_reduced_ranges  %>% 
   reduce_ranges_directed
 
-my_medianL <- map(smpls_lst, ~test_GR %>% 
+my_medianL <- map(smpls_lst, ~common_reduced_ranges %>% 
       select(!!str_c(.x, "_peakExpr"), unannot_peak) %>% 
       as_tibble() %>% 
       group_by(unannot_peak) %>% 
@@ -104,4 +83,6 @@ my_medianL <- my_medianL %>%
 my_unAnnot_GR <- my_reduced_Granges %>% 
   as_tibble() %>% 
   inner_join(my_medianL) %>% 
-  as_granges()
+  as_granges() %>% 
+  write_rds("unannot_peak_Ranges.rds")
+
