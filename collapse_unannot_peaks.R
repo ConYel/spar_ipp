@@ -67,10 +67,10 @@ common_reduced_ranges <- common_reduced_ranges %>%
                    function(.) ifelse(is.na(.), 0, .)) %>% 
   select(-starts_with("sample_file")) %>% 
   group_by(unannot_peak)
-
+# remake the reduced Granges with info about unannot_peaks -----
 my_reduced_Granges <- common_reduced_ranges  %>% 
   reduce_ranges_directed
-
+# calculate the median values for all peaks ----
 my_medianL <- map(smpls_lst, ~common_reduced_ranges %>% 
       select(!!str_c(.x, "_peakExpr"), unannot_peak) %>% 
       as_tibble() %>% 
@@ -79,10 +79,34 @@ my_medianL <- map(smpls_lst, ~common_reduced_ranges %>%
 
 my_medianL <- my_medianL %>%
   purrr::reduce(inner_join)
-
+# make the final Granges Obect -----
 my_unAnnot_GR <- my_reduced_Granges %>% 
   as_tibble() %>% 
   inner_join(my_medianL) %>% 
   as_granges() %>% 
   write_rds("unannot_peak_Ranges.rds")
+# 
+path <- "/mnt/NFS_SHARE_20/TNBC_smallRNA/SPAR_out/Results_ge/"
+smallRNA_files <- list.files(path,pattern = ".xls")
+smallRNA_files <- str_glue("{path}{smallRNA_files}")
+#load the list of files in one table
+DT <- rbindlist(sapply(smallRNA_files,fread,
+                       simplify=FALSE,
+                       #select = c(1,2,4,6),
+                       verbose=getOption("datatable.verbose", TRUE)),
+                use.names= TRUE,idcol="file")  %>%
+  rename(smallRNA = "#Gene")
+
+#sep first column to multiple
+#separate("#Gene",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") %>% 
+#as_tibble()
+#make matrix for DE analysis
+dt <- DT %>% group_by(file) %>% select(-RPM) %>%
+  spread(key = "file", value = "ReadCount" ) 
+
+# clean the colnames
+names(dt) <- basename(names(dt)) %>% str_remove(".xls")
+
+
+#dt <- dt %>% separate("smallRNA",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") 
 
