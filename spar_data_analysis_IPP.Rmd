@@ -23,7 +23,7 @@ todate <- format(Sys.time(), "%d_%b_%Y")
 ```
 ## create the dir for the analysis
 ```{r}
-my_exp <- "COLO205_IPP"
+my_exp <- "COLO205_IPP_not_annot"
 dir.create(str_glue("./{my_exp}_analysis"))
 dat_path <- str_glue("{my_exp}_analysis")
 ```
@@ -46,7 +46,7 @@ DT <- rbindlist(sapply(smallRNA_files,fread,
 # separate("smallRNA",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") %>%
 #  as_tibble()
 
-# make matrix for DE analysis  -----
+# 1.1a make matrix for DE analysis  -----
 dt <- DT %>% group_by(file) %>% select(-RPM) %>%
   spread(key = "file", value = "ReadCount" )
 
@@ -56,6 +56,8 @@ names(dt)[3:length(names(dt))] <- names(dt)[3:length(names(dt))] %>%
   str_remove(".trimmed_.+") %>% 
   str_remove(pattern = "COLO205_IPP_") %>%
   str_remove(pattern = "noAb_")
+# 1.1b load the not annot matrix for DE analysis  -----
+dt <- fread("all_peaks_smRNAs.txt")
 
 # create the targets object ----
 targets_file <- tibble(
@@ -64,6 +66,7 @@ targets_file <- tibble(
   batch = as_factor(str_remove(names(dt)[3:length(names(dt))],"^.+_"))
 )
 
+## in case there were SRA target files ----
 targ_path <- dir(path = path, 
                  pattern = "Sra",
                  full.names = T,
@@ -114,7 +117,7 @@ mydata <- readData(data = mat, factors = as.data.frame(targets_file), biotype = 
 
 mybiodetection <- dat(mydata, k = 0, type = "biodetection", factor = NULL)
 par(mfrow = c(1, 2))
-explo.plot(mybiodetection, samples = c(1,3), toplot = "piRNA",plottype = "comparison")
+explo.plot(mybiodetection, samples = c(1,4), toplot = "piRNA",plottype = "comparison")
 mycountsbio <- dat(mydata, factor = NULL, type = "countsbio")
 par(mfrow = c(1,1 ))
 
@@ -138,7 +141,7 @@ colnames(design) <- colnames(design) %>%
   str_remove("targets_file\\$") %>% 
   str_remove("group")
 
-rownames(design) <- targets_file$group
+rownames(design) <- targets_file$Run
 
 # create the DGElist ----
 dgl <- DGEList(counts = mat,
@@ -170,7 +173,7 @@ pal1 <- wes_palette(length(levels(as_factor(targets_file$group))),
     group = as_factor(levels(targets_file$group)))
 
 # add color to the DGEList 
-dgl_filt$colours <- inner_join(dgl_filt$samples,pal1,by= "group")$value
+dgl_filt$colours <- inner_join(dgl_filt$samples, pal1,by= "group")$value
 
 # plot RLE and other functions from EDASeq ----
 suppressPackageStartupMessages(library('EDASeq'))
@@ -184,7 +187,7 @@ EDASeq::plotPCA(dgl_filt$counts,
 dataEDA <- EDASeq::newSeqExpressionSet(counts = dgl_filt$counts, 
   phenoData = as.data.frame(dgl_filt$samples, row.names = rownames(dgl_filt$samples)))
 EDASeq::meanVarPlot(dataEDA, log=TRUE, ylim=c(0,16))
-EDASeq::biasPlot(dataEDA, "gc", log=TRUE, ylim=c(1,5))
+EDASeq::biasPlot(dataEDA, "gc", log=TRUE, ylim=c(1,2))
 ```
 ## histogram
 ```{r}
@@ -278,7 +281,7 @@ names(l_hc) <- rep(rownames(l_hc),times = ncol(l_hc))
 
 pdf(str_glue("{dat_path}/hierarchic_clust_{todate}_{my_exp}.pdf"))
 for (i in seq_along(l_hc)) {
-  myplclust(l_hc[[i]],
+ rafalib::myplclust(l_hc[[i]],
             lab.col = dgl_filt$colours, #x1$colours,pal1$value
             #labels = dgl_filt$samples$ ,  
        xlab = str_glue("{names(l_hc[i])}"),
@@ -407,7 +410,6 @@ deseq2_p <- DEseq2_res_C_Ab_vs_Control %>%
     )
   )) %>% 
   select(smallRNA = "GeneID", DEseq2 )
-
 
 # region report for DEseq2 -----
 suppressPackageStartupMessages(library(regionReport))

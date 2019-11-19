@@ -106,22 +106,23 @@ DT <- rbindlist(sapply(smallRNA_files, fread,
 ### separate first column to multiple ----
 #separate("#Gene",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") %>% 
 #as_tibble()
-#DT <- DT %>% 
+#DT <- DT %>% mutate(sample_file = sample_file %>% 
 #  str_remove(".+SPAR_results/") %>%
 #  str_remove(".trimmed_.+") %>%
 #  str_remove(pattern = "COLO205_IPP_") %>%
-#  str_remove(pattern = "noAb_")
+#  str_remove(pattern = "noAb_"))
 
 ### make matrix for DE analysis -----
 dt <- DT %>% 
   group_by(sample_file) %>% 
-  spread(key = "sample_file", value = "ReadCount" ) %>% 
-  rename(Peaks_GeneClass = "GeneClass")
+  spread(key = "sample_file", value = "ReadCount" ) 
 # collapse not annot and annot in one matrix ----
 my_unAnnot_GR <- my_unAnnot_GR %>% 
   as_tibble() %>% 
-  unite(smallRNA,seqnames:strand, sep = "_") %>% 
-  rename(Peaks_GeneClass = "unannot_peak")
+  unite(smallRNA, seqnames:unannot_peak, sep = ":") %>% 
+  mutate(GeneClass = "unannot_peak") %>% 
+  select(smallRNA, GeneClass, everything())
+names(my_unAnnot_GR) <- names(my_unAnnot_GR) %>% str_remove("_peakExpr")
 print("are the name identical?")
 identical(names(my_unAnnot_GR),names(dt))
 all_peaks_smRNAs <- dt[names(my_unAnnot_GR)] %>% 
