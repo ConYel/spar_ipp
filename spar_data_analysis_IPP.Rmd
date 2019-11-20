@@ -40,7 +40,7 @@ DT <- rbindlist(sapply(smallRNA_files,fread,
                        #select = c(1,2,4,6),
                        verbose=getOption("datatable.verbose", TRUE)),
                 use.names= TRUE,idcol="file")  %>%
-  rename(smallRNA = "#Gene")
+  dplyr::rename(smallRNA = "#Gene")
 
 # sep "smallRNA" column to multiple
 # separate("smallRNA",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") %>%
@@ -102,7 +102,7 @@ mybiotypes <-  dt$GeneClass
 names(mybiotypes) <-  dt$smallRNA
 
 # make the matrix  
-mat <- dt %>%
+mat <- dt %>% 
   unite("smallRNA",c(smallRNA:GeneClass), sep = "_") %>%
   column_to_rownames("smallRNA") %>%
   as.matrix()

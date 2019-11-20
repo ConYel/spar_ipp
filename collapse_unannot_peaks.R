@@ -107,8 +107,7 @@ DT <- rbindlist(sapply(smallRNA_files, fread,
   as_granges() %>% 
   as_tibble() %>% 
   select(sample_file, everything()) %>% 
-  unite("smallRNA" ,seqnames:DQ, sep = ":")
-  
+  unite("smallRNA" ,seqnames:DQ, sep = ":") 
 ### separate first column to multiple ----
 #separate("smallRNA",c("chr","start","end","strand","smallRNA","DQ"), sep = ":",convert = TRUE) %>% 
 #as_tibble()
@@ -117,7 +116,6 @@ DT <- rbindlist(sapply(smallRNA_files, fread,
 #  str_remove(".trimmed_.+") %>%
 #  str_remove(pattern = "COLO205_IPP_") %>%
 #  str_remove(pattern = "noAb_"))
-
 ### make matrix for DE analysis -----
 dt <- DT %>% 
   group_by(sample_file) %>% 
@@ -125,7 +123,9 @@ dt <- DT %>%
 # collapse not annot and annot in one matrix ----
 my_unAnnot_GR <- my_unAnnot_GR %>% 
   as_tibble() %>% 
-  unite(smallRNA, seqnames:unannot_peak, sep = ":") %>% 
+  mutate(DQ = "nRefPeak") %>% 
+  select(seqnames:unannot_peak, DQ, everything()) %>% 
+  unite(smallRNA, seqnames:DQ, sep = ":") %>% 
   mutate(GeneClass = "unannot_peak") %>% 
   select(smallRNA, GeneClass, everything())
 names(my_unAnnot_GR) <- names(my_unAnnot_GR) %>% str_remove("_peakExpr")
