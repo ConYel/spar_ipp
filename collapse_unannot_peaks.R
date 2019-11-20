@@ -22,7 +22,7 @@ main_Grange <- rbindlist(sapply(smallRNA_files,fread,
                        verbose=getOption("datatable.verbose", TRUE)),
                 use.names= TRUE,
                 idcol="sample_file")  %>%
-  rename(peakChr = "#peakChr") %>% 
+  dplyr::rename(peakChr = "#peakChr") %>% 
   as_tibble %>% 
   mutate(sample_file = sample_file %>% 
            str_remove(".+SPAR_results/") %>%
@@ -96,15 +96,21 @@ DT <- rbindlist(sapply(smallRNA_files, fread,
                        simplify=FALSE,
                        verbose=getOption("datatable.verbose", TRUE)),
                 use.names= TRUE, idcol="sample_file")  %>%
-  rename(smallRNA = "#Gene") %>% 
+  dplyr::rename(smallRNA = "#Gene") %>% 
   select(-RPM) %>% 
   as_tibble() %>% 
   mutate(sample_file = sample_file %>% 
            str_remove(".trimmed_.+") %>% 
            str_remove(".+/")
-           )
+           ) %>% separate("smallRNA", c("seqnames","start","end","strand","smallRNA","DQ"), sep = ":", convert = TRUE) %>% 
+  mutate(DQ = if_else( DQ == "NA","noRef", DQ, "noRef")) %>% 
+  as_granges() %>% 
+  as_tibble() %>% 
+  select(sample_file, everything()) %>% 
+  unite("smallRNA" ,seqnames:DQ, sep = ":")
+  
 ### separate first column to multiple ----
-#separate("#Gene",c("chr","start","end","strand","smallRNA","DQ"), sep = ":") %>% 
+#separate("smallRNA",c("chr","start","end","strand","smallRNA","DQ"), sep = ":",convert = TRUE) %>% 
 #as_tibble()
 #DT <- DT %>% mutate(sample_file = sample_file %>% 
 #  str_remove(".+SPAR_results/") %>%

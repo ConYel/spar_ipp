@@ -103,7 +103,7 @@ names(mybiotypes) <-  dt$smallRNA
 
 # make the matrix  
 mat <- dt %>%
-  select(-GeneClass) %>%
+  unite("smallRNA",c(smallRNA:GeneClass), sep = "_") %>%
   column_to_rownames("smallRNA") %>%
   as.matrix()
 # make clearer names
@@ -399,7 +399,7 @@ DEseq2_res_INPUT_vs_Control <- results(dds, name= "group_INPUT_vs_Control", alph
   arrange(padj) %>% 
   write_tsv(str_glue("{dat_path}/DEseq2_INPUT_vs_Ctl_{todate}_{my_exp}.txt"))
 
-hist(DEseq2_res_C_Ab_vs_Control$pvalue[DEseq2_res_C_Ab_vs_Control$baseMean > 1], 
+hist(DEseq2_res_N_Ab_vs_Control$pvalue[DEseq2_res_N_Ab_vs_Control$baseMean > 1], 
      breaks = 0:20/20,
      col = "grey50", border = "white")
 
@@ -420,8 +420,8 @@ report <- DESeq2Report(dds, project = str_glue('DESeq2_{todate}_{my_exp}_HTML_re
     output = 'index', theme = theme_bw())
 # edgeR  ----
 edger_norm %>% names()
-plotMD(edger_norm[[4]],column = 3)
-plotMD(edger_norm[[4]],column = 4)
+plotMD(edger_norm[[2]],column = 3)
+plotMD(edger_norm[[2]],column = 4)
 x1_TMM <- estimateDisp(edger_norm[[2]], design=design, robust=TRUE)
 plotBCV(x1_TMM)
 fit <- glmQLFit(x1_TMM, design, robust = TRUE)
@@ -513,7 +513,7 @@ voom_res_INPUT_vs_Ctl  <- topTable(efit,
   as_tibble(rownames = "smallRNA")  %>% 
   write_tsv(str_glue("{dat_path}/voomQW_TMM_res_INPUT_vs_Ctl_{todate}_{my_exp}.txt"))
 
-hist(toplvoom_res_AD_vs_Control$P.Value, 
+hist(voom_res_INPUT_vs_Ctl$P.Value, 
      breaks = 0:20/20,
      col = "grey50", border = "white")
 
@@ -551,7 +551,8 @@ INPUT_IP <- voom_res_INPUT_vs_Ctl %>%
          logFC > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","INPUT_")})
 
-INPUT_IP %>% inner_join(N_IP) %>% 
+INPUT_IP %>% 
+  inner_join(N_IP) %>% 
   select(smallRNA)
 INPUT_IP %>% inner_join(C_IP) %>% 
   select(smallRNA)
@@ -582,6 +583,15 @@ DEseq_IPP <- C_D2 %>%
   filter(!GeneID %in% INPUT_D2$GeneID) %>% 
   select(GeneID, C_log2FoldChange, C_padj, N_log2FoldChange, N_padj)
 ```
+## Annotate the peaks
+```{r}
+library(plyranges)
+DEseq_IPP %>%  
+  separate(GeneID, c("seqnames", "start", "end", "width", "strand", "GeneClass"),sep = ":") %>% 
+  as_granges()
+```
+
+
 #test Granges plyr
 ```{r}
 BiocManager::install("plyranges")
