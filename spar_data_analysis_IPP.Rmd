@@ -93,14 +93,12 @@ dt %>% write_tsv(str_glue("{dat_path}/raw_reads_{todate}_{my_exp}_SPAR.txt"))
 # load dataset ----
 DT <- fread(list.files(path = dat_path, pattern = "raw", full.names = TRUE ))
 suppressPackageStartupMessages({library('edgeR')
-  library('NOIseq')})# there is a problem loading it 
+  library('NOISeq')})
 # I load it manually 
 suppressPackageStartupMessages(library('rafalib'))
 stopifnot(identical(as.character(targets_file$sample_name),names(dt)[3:length(names(dt))]))
 # exploratory analysis with NOISeq -----
 mybiotypes <-  dt$GeneClass
-names(mybiotypes) <-  dt$smallRNA
-
 # make the matrix  
 mat <- dt %>% 
   unite("smallRNA",c(smallRNA:GeneClass), sep = "_") %>%
@@ -111,11 +109,13 @@ colnames(mat) <-  colnames(mat)  %>%
   str_replace("Control","Ctrl")
 
 targets_file$Run <- colnames(mat)
-
+names(mybiotypes) <- rownames(mat)
 # NOISeq dataset
-mydata <- readData(data = mat, factors = as.data.frame(targets_file), biotype = mybiotypes)
+mydata <- NOISeq::readData(data = mat, 
+                           factors = as.data.frame(targets_file), 
+                           biotype = mybiotypes)
 
-mybiodetection <- dat(mydata, k = 0, type = "biodetection", factor = NULL)
+mybiodetection <- NOISeq::dat(mydata, k = 0, type = "biodetection")
 par(mfrow = c(1, 2))
 explo.plot(mybiodetection, samples = c(1,4), toplot = "piRNA",plottype = "comparison")
 mycountsbio <- dat(mydata, factor = NULL, type = "countsbio")
@@ -419,6 +419,7 @@ report <- DESeq2Report(dds, project = str_glue('DESeq2_{todate}_{my_exp}_HTML_re
     intgroup = c('group'), outdir = str_glue("{dat_path}/DESeq2_report_{todate}"),
     output = 'index', theme = theme_bw())
 # edgeR  ----
+par(mfrow=c(1,2))
 edger_norm %>% names()
 plotMD(edger_norm[[2]],column = 3)
 plotMD(edger_norm[[2]],column = 4)
@@ -432,9 +433,8 @@ con_mat <- makeContrasts(
   N_vs_Ctl = N_Ab - Control,
   INPUT_vs_Ctl = INPUT - Control,
   levels = design)
-
+### INPUT
 edgeR_res_INPUT_vs_Ctl <- glmQLFTest(fit,contrast = con_mat[,"INPUT_vs_Ctl"])
-
 is.de <- decideTests(edgeR_res_INPUT_vs_Ctl)
 summary(is.de)
 topTags(edgeR_res_INPUT_vs_Ctl,n=10)$table 
@@ -444,17 +444,60 @@ plotMD(edgeR_res_INPUT_vs_Ctl,
        col = c("red","blue"),
        legend="topright")
 
-topedgeR_res_AD_vs_Control <- topTags(edgeR_res_AD_vs_Control, 
-                            n = nrow(edgeR_res_AD_vs_Control), 
+topedgeR_res_INPUT_vs_Ctl <- topTags(edgeR_res_INPUT_vs_Ctl, 
+                            n = nrow(edgeR_res_INPUT_vs_Ctl), 
                             adjust.method = "BH", 
                             sort.by = "PValue", 
                             p.value = 1)$table %>% 
   as_tibble(rownames = "smallRNA") %>% 
-  write_tsv(str_glue("{dat_path}/edgeR_res_AD_vs_Ctl_{todate}_{my_exp}.txt"))
+  write_tsv(str_glue("{dat_path}/edgeR_res_INPUT_vs_Ctl_{todate}_{my_exp}.txt"))
 
-hist(topedgeR_res_AD_vs_Control$PValue, breaks = 0:20/20,
+hist(topedgeR_res_INPUT_vs_Ctl$PValue, breaks = 0:20/20,
+     col = "grey50", border = "white")
+### C ab
+edgeR_res_C_vs_Ctl <- glmQLFTest(fit,contrast = con_mat[,"C_vs_Ctl"])
+is.de <- decideTests(edgeR_res_C_vs_Ctl)
+summary(is.de)
+topTags(edgeR_res_INPUT_vs_Ctl,n=10)$table 
+plotMD(edgeR_res_INPUT_vs_Ctl,
+       status = is.de,
+       values = c(1,-1),
+       col = c("red","blue"),
+       legend="topright")
+
+topedgeR_res_C_vs_Ctl <- topTags(edgeR_res_C_vs_Ctl, 
+                            n = nrow(edgeR_res_C_vs_Ctl), 
+                            adjust.method = "BH", 
+                            sort.by = "PValue", 
+                            p.value = 1)$table %>% 
+  as_tibble(rownames = "smallRNA") %>% 
+  write_tsv(str_glue("{dat_path}/edgeR_res_C_vs_Ctl_{todate}_{my_exp}.txt"))
+
+hist(topedgeR_res_C_vs_Ctl$PValue, breaks = 0:20/20,
      col = "grey50", border = "white")
 
+### N ab
+edgeR_res_N_vs_Ctl <- glmQLFTest(fit,contrast = con_mat[,"N_vs_Ctl"])
+is.de <- decideTests(edgeR_res_N_vs_Ctl)
+summary(is.de)
+topTags(edgeR_res_N_vs_Ctl,n=10)$table 
+plotMD(edgeR_res_N_vs_Ctl,
+       status = is.de,
+       values = c(1,-1),
+       col = c("red","blue"),
+       legend="topright")
+
+topedgeR_res_N_vs_Ctl <- topTags(edgeR_res_N_vs_Ctl, 
+                            n = nrow(edgeR_res_N_vs_Ctl), 
+                            adjust.method = "BH", 
+                            sort.by = "PValue", 
+                            p.value = 1)$table %>% 
+  as_tibble(rownames = "smallRNA") %>% 
+  write_tsv(str_glue("{dat_path}/edgeR_res_C_vs_Ctl_{todate}_{my_exp}.txt"))
+
+hist(topedgeR_res_N_vs_Ctl$PValue, breaks = 0:20/20,
+     col = "grey50", border = "white")
+### edgeR venny
 edgeR_p <- topedgeR_res_AD_vs_Control %>% 
   mutate(edgeR = if_else(
     FDR >= 0.05, 0, if_else(
@@ -516,6 +559,12 @@ voom_res_INPUT_vs_Ctl  <- topTable(efit,
 hist(voom_res_INPUT_vs_Ctl$P.Value, 
      breaks = 0:20/20,
      col = "grey50", border = "white")
+hist(voom_res_N_vs_Ctl$P.Value, 
+     breaks = 0:20/20,
+     col = "grey50", border = "white")
+hist(voom_res_C_vs_Ctl$P.Value, 
+     breaks = 0:20/20,
+     col = "grey50", border = "white")
 
 voomQW_p <- voom_res_C_vs_Ctl %>% 
   mutate(voomQW = if_else(
@@ -539,15 +588,15 @@ dev.off()
 # checking for DEs between both abs ------
 ## voom ---
 C_IP <- voom_res_C_vs_Ctl %>% 
-  filter(adj.P.Val < 0.05,
+  filter(adj.P.Val < 0.1,
          logFC > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","C_")})
 N_IP <- voom_res_N_vs_Ctl %>% 
-  filter(adj.P.Val < 0.05,
+  filter(adj.P.Val < 0.1,
          logFC > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","N_")})
 INPUT_IP <- voom_res_INPUT_vs_Ctl %>% 
-  filter(adj.P.Val < 0.05,
+  filter(adj.P.Val < 0.1,
          logFC > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","INPUT_")})
 
@@ -560,7 +609,8 @@ INPUT_IP %>% inner_join(C_IP) %>%
 voom_IPP <- C_IP %>% 
   inner_join(N_IP) %>%
   filter(!smallRNA %in% INPUT_IP$smallRNA) %>% 
-  select(smallRNA, C_logFC, C_adj.P.Val, N_logFC, N_adj.P.Val)
+  select(smallRNA, C_logFC, C_adj.P.Val, N_logFC, N_adj.P.Val) %>% 
+  write_tsv(str_glue("{dat_path}/voomQW_TMM_res_common_{todate}_{my_exp}.txt"))
 
 ## DEseq2 ---
 C_D2 <- DEseq2_res_C_Ab_vs_Control %>% 
@@ -581,14 +631,49 @@ INPUT_D2 %>% inner_join(N_D2) %>% select(GeneID)
 DEseq_IPP <- C_D2 %>% 
   inner_join(N_D2) %>%
   filter(!GeneID %in% INPUT_D2$GeneID) %>% 
-  select(GeneID, C_log2FoldChange, C_padj, N_log2FoldChange, N_padj)
+  select(GeneID, C_log2FoldChange, C_padj, N_log2FoldChange, N_padj) %>% 
+  write_tsv(str_glue("{dat_path}/DESEQ_res_common_{todate}_{my_exp}.txt"))
+
+DEseq_IPP %>% filter(GeneID %in% voom_IPP$smallRNA)
 ```
 ## Annotate the peaks
 ```{r}
 library(plyranges)
-DEseq_IPP %>%  
-  separate(GeneID, c("seqnames", "start", "end", "width", "strand", "GeneClass"),sep = ":") %>% 
-  as_granges()
+DE_ranges <- DEseq_IPP %>%  
+  separate(GeneID, c("seqnames", "start", "end", "width", "strand", "smallRNA","DQ"),sep = ":", convert = TRUE) %>% 
+   separate(DQ, c("DQ","GeneClass"), sep = "_") %>% 
+  plyranges::as_granges()
+DE_ranges <- voom_IPP %>%  
+  separate(smallRNA, c("seqnames", "start", "end", "width", "strand", "smallRNA","DQ"),sep = ":", convert = TRUE) %>% 
+   separate(DQ, c("DQ","GeneClass"), sep = "_") %>% 
+  plyranges::as_granges()
+
+library(TxDb.Hsapiens.UCSC.hg38.knownGene);library(org.Hs.eg.db)
+txd <- TxDb.Hsapiens.UCSC.hg38.knownGene
+library(bumphunter)
+genes <- annotateTranscripts(TxDb.Hsapiens.UCSC.hg38.knownGene,annotation="org.Hs.eg.db")
+annotated_peaks <- matchGenes(DE_ranges, genes, type = "any", promoterDist = 2500, skipExons = FALSE, verbose = TRUE) %>% as_tibble()
+
+bed_file <- list.files("/home/0",full.names = TRUE, pattern = "piR.+.bed", recursive = TRUE)
+
+library(plyranges)
+pirbase <- rtracklayer::import(bed_file)
+pirbase_red <- pirbase %>% 
+  plyranges::reduce_ranges_directed() %>% 
+  as_tibble()
+
+piRbase_olaps <- DE_ranges %>% join_overlap_left_directed(pirbase, minoverlap = 10)
+piRbase_olaps <- piRbase_olaps %>% 
+  filter(!is.na(name)) %>% 
+  as_tibble() 
+piRBnas <- pirbase %>% 
+  filter(name %in% piRbase_olaps$name) %>% 
+  as_tibble() %>% 
+  rename_at(vars(-c("seqnames", "name","score")), function(.) str_c("piRBase_", .))
+  
+piRbase_olaps %>% 
+  inner_join(piRBnas) %>% 
+  write_tsv(str_glue("{dat_path}/piRBase_DE_DESEQ2_common_{todate}_{my_exp}.txt"))
 ```
 
 
