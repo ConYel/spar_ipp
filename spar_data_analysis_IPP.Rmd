@@ -612,6 +612,11 @@ voom_IPP <- C_IP %>%
   select(smallRNA, C_logFC, C_adj.P.Val, N_logFC, N_adj.P.Val) %>% 
   write_tsv(str_glue("{dat_path}/voomQW_TMM_res_common_{todate}_{my_exp}.txt"))
 
+voom_IPP_union <- C_IP %>% 
+  full_join(N_IP) %>%
+  filter(!smallRNA %in% INPUT_IP$smallRNA) %>% 
+  select(smallRNA, C_logFC, C_adj.P.Val, N_logFC, N_adj.P.Val) %>% 
+  write_tsv(str_glue("{dat_path}/voomQW_TMM_res_union_{todate}_{my_exp}.txt"))
 ## DEseq2 ---
 C_D2 <- DEseq2_res_C_Ab_vs_Control %>% 
   filter(padj < 0.05,
@@ -634,16 +639,24 @@ DEseq_IPP <- C_D2 %>%
   select(GeneID, C_log2FoldChange, C_padj, N_log2FoldChange, N_padj) %>% 
   write_tsv(str_glue("{dat_path}/DESEQ_res_common_{todate}_{my_exp}.txt"))
 
+DEseq_IPP_union <- C_D2 %>% 
+  full_join(N_D2) %>%
+  filter(!GeneID %in% INPUT_D2$GeneID) %>% 
+  select(GeneID, C_log2FoldChange, C_padj, N_log2FoldChange, N_padj) %>% 
+  write_tsv(str_glue("{dat_path}/DESEQ_res_union_{todate}_{my_exp}.txt"))
+
 DEseq_IPP %>% filter(GeneID %in% voom_IPP$smallRNA)
+DEseq_IPP_union %>% filter(GeneID %in% voom_IPP_union$smallRNA)
 ```
 ## Annotate the peaks
 ```{r}
 library(plyranges)
-DE_ranges <- DEseq_IPP %>%  
+DE_ranges_DESQ <- DEseq_IPP_union %>%  
   separate(GeneID, c("seqnames", "start", "end", "width", "strand", "smallRNA","DQ"),sep = ":", convert = TRUE) %>% 
    separate(DQ, c("DQ","GeneClass"), sep = "_") %>% 
   plyranges::as_granges()
-DE_ranges <- voom_IPP %>%  
+
+DE_ranges_voom <- voom_IPP_union %>%  
   separate(smallRNA, c("seqnames", "start", "end", "width", "strand", "smallRNA","DQ"),sep = ":", convert = TRUE) %>% 
    separate(DQ, c("DQ","GeneClass"), sep = "_") %>% 
   plyranges::as_granges()
@@ -657,23 +670,30 @@ annotated_peaks <- matchGenes(DE_ranges, genes, type = "any", promoterDist = 250
 bed_file <- list.files("/home/0",full.names = TRUE, pattern = "piR.+.bed", recursive = TRUE)
 
 library(plyranges)
-pirbase <- rtracklayer::import(bed_file)
-pirbase_red <- pirbase %>% 
-  plyranges::reduce_ranges_directed() %>% 
-  as_tibble()
+pirbase <- read_bed(bed_file)
 
-piRbase_olaps <- DE_ranges %>% join_overlap_left_directed(pirbase, minoverlap = 10)
-piRbase_olaps <- piRbase_olaps %>% 
+piRbase_olaps <- DE_ranges_DESQ %>% join_overlap_left_directed(pirbase, minoverlap = 5) %>% 
   filter(!is.na(name)) %>% 
   as_tibble() 
+
 piRBnas <- pirbase %>% 
   filter(name %in% piRbase_olaps$name) %>% 
   as_tibble() %>% 
   rename_at(vars(-c("seqnames", "name","score")), function(.) str_c("piRBase_", .))
-  
+
 piRbase_olaps %>% 
   inner_join(piRBnas) %>% 
   write_tsv(str_glue("{dat_path}/piRBase_DE_DESEQ2_common_{todate}_{my_exp}.txt"))
+
+piRNA_IPP <- list.files("/home/0",full.names = TRUE, pattern = "piRNAs316.txt", recursive = TRUE) %>% 
+  read_tsv(col_names = FALSE) %>% 
+  separate(X1, c("class", "piRNA"), sep = "_match_")
+
+piRbase_olaps %>% filter(name %in% piRNA_IPP$piRNA)
+
+pirbase_red <- pirbase %>% 
+  filter(name %in% piRNA_IPP$piRNA) %>% 
+  as_tibble()
 ```
 
 

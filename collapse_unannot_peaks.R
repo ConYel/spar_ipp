@@ -101,24 +101,21 @@ DT <- rbindlist(sapply(smallRNA_files, fread,
   as_tibble() %>% 
   mutate(sample_file = sample_file %>% 
            str_remove(".trimmed_.+") %>% 
-           str_remove(".+/")
+           str_remove(".+/") %>% 
+           str_remove(pattern = "COLO205_IPP_") %>%
+           str_remove(pattern = "noAb_")
            ) %>% separate("smallRNA", c("seqnames","start","end","strand","smallRNA","DQ"), sep = ":", convert = TRUE) %>% 
   mutate(DQ = if_else( DQ == "NA","noRef", DQ, "noRef")) %>% 
   as_granges() %>% 
   as_tibble() %>% 
   select(sample_file, everything()) %>% 
   unite("smallRNA" ,seqnames:DQ, sep = ":") 
-### separate first column to multiple ----
-#separate("smallRNA",c("chr","start","end","strand","smallRNA","DQ"), sep = ":",convert = TRUE) %>% 
-#as_tibble()
-#DT <- DT %>% mutate(sample_file = sample_file %>% 
-#  str_remove(".+SPAR_results/") %>%
-#  str_remove(".trimmed_.+") %>%
-#  str_remove(pattern = "COLO205_IPP_") %>%
-#  str_remove(pattern = "noAb_"))
 ### make matrix for DE analysis -----
 dt <- DT %>% 
   group_by(sample_file) %>% 
+  pivot_wider(names_from = "sample_file", 
+              values_from = "ReadCount",) %>% 
+  arrange(smallRNA)
   spread(key = "sample_file", value = "ReadCount" ) 
 # collapse not annot and annot in one matrix ----
 my_unAnnot_GR <- my_unAnnot_GR %>% 
