@@ -92,10 +92,10 @@ dt %>% write_tsv(str_glue("{dat_path}/raw_reads_{todate}_{my_exp}_SPAR.txt"))
 ```{r}
 # load dataset ----
 DT <- fread(list.files(path = dat_path, pattern = "raw", full.names = TRUE ))
-suppressPackageStartupMessages({library('edgeR')
-  library('NOISeq')})
-# I load it manually 
-suppressPackageStartupMessages(library('rafalib'))
+suppressPackageStartupMessages({
+  library('edgeR')
+  library('NOISeq')
+  library('rafalib')})
 stopifnot(identical(as.character(targets_file$sample_name),names(dt)[3:length(names(dt))]))
 # exploratory analysis with NOISeq -----
 mybiotypes <-  dt$GeneClass
@@ -130,18 +130,22 @@ dev.off()
 # filtering with NOISEq  -----
 noiL <- as.list(1L:3)
 names(noiL) <- c("cpm", "Wilcoxon", "Prop")
-NOISeq_filt <- lapply(noiL, function(x) NOISeq::filtered.data(mat, 
+NOISeq_filt <- sapply(noiL, function(x) NOISeq::filtered.data(mat, 
         factor = targets_file$group,
         norm = FALSE, 
-        method = x, cv.cutoff=100, cpm=1))
-
-# create the design matrix  -----
-design <- model.matrix(~0+ targets_file$group + targets_file$batch)
+        method = x, cv.cutoff=100, cpm=1), simplify = FALSE, USE.NAMES = TRUE)
+ # create the design matrix  -----
+design <- model.matrix(~0 + targets_file$group + targets_file$batch)
 colnames(design) <- colnames(design) %>% 
   str_remove("targets_file\\$") %>% 
   str_remove("group")
-
 rownames(design) <- targets_file$Run
+## more strigent filter
+design_2 <- model.matrix(~0 + targets_file$group)
+colnames(design_2) <- colnames(design_2) %>% 
+  str_remove("targets_file\\$") %>% 
+  str_remove("group")
+rownames(design_2) <- targets_file$Run
 
 # create the DGElist ----
 dgl <- DGEList(counts = mat,
@@ -151,10 +155,28 @@ dgl <- DGEList(counts = mat,
 
 # filterwith EdgeR ----
 keep.exprs <- filterByExpr.DGEList(dgl, design = design)
+keep.exprs_2 <- filterByExpr.DGEList(dgl, design = design_2)
 dgl_filt <- dgl[keep.exprs,,keep.lib.sizes=FALSE]
+dgl_filt_2 <- dgl[keep.exprs_2,,keep.lib.sizes=FALSE]
+dim(dgl);dim(dgl_filt);dim(dgl_filt_2)
 
-dim(dgl);dim(dgl_filt)
-str_glue( "Starting features: {nrow(dgl)}\nedgeR filter, remaining features: {nrow(dgl_filt)}\nCPM approach, remaining features: {nrow(NOISeq_filt[[1]])}\nWilcoxon filter, remaining features: {nrow(NOISeq_filt[[2]])}\nProportion approach filter, remaining features: {nrow(NOISeq_filt[[3]])}")
+
+ map(smpls_lst, ~ gr1  %>% 
+      filter(samples_file == .x) %>% 
+      select(!!str_c(.x, "_peakExpr") := "peakExpressionValue",everything()))
+ 
+features_NOIS <- map(NOISeq_filt, ~ .x %>% 
+                       rownames() %>%
+                       enframe(name = NULL)) 
+features_NOIS <- list(features_NOIS[[1]],features_NOIS[[3]])
+
+features_edgeR <- map(list(dgl_filt, dgl_filt_2) , ~ .x %>% 
+                       rownames() %>%
+                       enframe(name = NULL)) %>% set_names("batch", "no_batch")
+
+common_edgeR_batch <-  map2(features_edgeR[1] , features_NOIS, ~ .x %>% inner_join(.y))
+common_edgeR_nobatch <-  map2(features_edgeR[2] , features_NOIS, ~ .x %>% inner_join(.y))
+str_glue( "Starting features: {nrow(dgl)}\nedgeR filter, remaining: {nrow(dgl_filt)}\nedgeR no batch, remaining: {nrow(dgl_filt_2)}\nCPM filter, remaining: {nrow(NOISeq_filt[[1]])}, common edgeR_batch: {nrow(common_edgeR_batch[[1]])}, common edgeR_no_batch:{nrow(common_edgeR_batch[[2]])}\nWilcoxon filter, remaining features: {nrow(NOISeq_filt[[2]])}\nProportion filter, remaining features: {nrow(NOISeq_filt[[3]])}, common edgeR_batch: {nrow(common_edgeR_nobatch[[1]])}, common edgeR_no_batch:{nrow(common_edgeR_nobatch[[2]])} ")
 
 # if we want to keep noiseq filter instead of edger but use edger object ----
 filte_Nois <- dgl[rownames(dgl$counts) %in% rownames(NOISeq_filt[[i]]),,keep.lib.sizes=FALSE]

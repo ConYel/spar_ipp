@@ -92,10 +92,12 @@ smallRNA_files <- smallRNA_files <- dir(path, full.names = TRUE,
                                         pattern = "smRNA_gene_expression.xls",
                                         recursive = TRUE)
 ### load the list of files in one table -----
-DT <- rbindlist(sapply(smallRNA_files, fread,
-                       simplify=FALSE,
-                       verbose=getOption("datatable.verbose", TRUE)),
-                use.names= TRUE, idcol="sample_file")  %>%
+DT <- rbindlist(sapply(smallRNA_files, 
+                       fread,
+                       simplify = FALSE,
+                       verbose = getOption("datatable.verbose", TRUE)),
+                use.names = TRUE, 
+                idcol="sample_file")  %>%
   dplyr::rename(smallRNA = "#Gene") %>% 
   select(-RPM) %>% 
   as_tibble() %>% 
