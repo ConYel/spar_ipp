@@ -160,7 +160,6 @@ dgl_filt <- dgl[keep.exprs,,keep.lib.sizes=FALSE]
 dgl_filt_2 <- dgl[keep.exprs_2,,keep.lib.sizes=FALSE]
 dim(dgl);dim(dgl_filt);dim(dgl_filt_2)
 
-
  map(smpls_lst, ~ gr1  %>% 
       filter(samples_file == .x) %>% 
       select(!!str_c(.x, "_peakExpr") := "peakExpressionValue",everything()))
@@ -168,24 +167,23 @@ dim(dgl);dim(dgl_filt);dim(dgl_filt_2)
 features_NOIS <- map(NOISeq_filt, ~ .x %>% 
                        rownames() %>%
                        enframe(name = NULL)) 
-features_NOIS <- list(features_NOIS[[1]],features_NOIS[[3]])
 
 features_edgeR <- map(list(dgl_filt, dgl_filt_2) , ~ .x %>% 
                        rownames() %>%
                        enframe(name = NULL)) %>% set_names("batch", "no_batch")
 
-common_edgeR_batch <-  map2(features_edgeR[1] , features_NOIS, ~ .x %>% inner_join(.y))
-common_edgeR_nobatch <-  map2(features_edgeR[2] , features_NOIS, ~ .x %>% inner_join(.y))
+common_edgeR_batch <-  map2( features_NOIS[1], features_edgeR, ~ .x %>% inner_join(.y))
+common_edgeR_nobatch <-  map2( features_NOIS[3], features_edgeR, ~ .x %>% inner_join(.y))
+
 str_glue( "Starting features: {nrow(dgl)}\nedgeR filter, remaining: {nrow(dgl_filt)}\nedgeR no batch, remaining: {nrow(dgl_filt_2)}\nCPM filter, remaining: {nrow(NOISeq_filt[[1]])}, common edgeR_batch: {nrow(common_edgeR_batch[[1]])}, common edgeR_no_batch:{nrow(common_edgeR_batch[[2]])}\nWilcoxon filter, remaining features: {nrow(NOISeq_filt[[2]])}\nProportion filter, remaining features: {nrow(NOISeq_filt[[3]])}, common edgeR_batch: {nrow(common_edgeR_nobatch[[1]])}, common edgeR_no_batch:{nrow(common_edgeR_nobatch[[2]])} ")
 
 # if we want to keep noiseq filter instead of edger but use edger object ----
-filte_Nois <- dgl[rownames(dgl$counts) %in% rownames(NOISeq_filt[[i]]),,keep.lib.sizes=FALSE]
-
+dgl_filt <- dgl[rownames(dgl$counts) %in% rownames(NOISeq_filt[[i]]),,keep.lib.sizes=FALSE]
+## or
 dgl_filt <- DGEList(counts = NOISeq_filt[[i]],
                samples = targets_file,
                lib.size = colSums(NOISeq_filt[[i]]),
                norm.factors = rep(1,ncol(NOISeq_filt[[i]])))
-
 # finally give colours to samples ----
 suppressPackageStartupMessages(library('wesanderson'))
 pal1 <- wes_palette(length(levels(as_factor(targets_file$group))),
@@ -424,6 +422,12 @@ DEseq2_res_INPUT_vs_Control <- results(dds, name= "group_INPUT_vs_Control", alph
 hist(DEseq2_res_N_Ab_vs_Control$pvalue[DEseq2_res_N_Ab_vs_Control$baseMean > 1], 
      breaks = 0:20/20,
      col = "grey50", border = "white")
+hist(DEseq2_res_C_Ab_vs_Control$pvalue[DEseq2_res_C_Ab_vs_Control$baseMean > 1], 
+     breaks = 0:20/20,
+     col = "grey50", border = "white")
+hist(DEseq2_res_INPUT_vs_Control$pvalue[DEseq2_res_INPUT_vs_Control$baseMean > 1], 
+     breaks = 0:20/20,
+     col = "grey50", border = "white")
 
 deseq2_p <- DEseq2_res_C_Ab_vs_Control %>% 
   mutate(DEseq2 = if_else(
@@ -480,8 +484,8 @@ hist(topedgeR_res_INPUT_vs_Ctl$PValue, breaks = 0:20/20,
 edgeR_res_C_vs_Ctl <- glmQLFTest(fit,contrast = con_mat[,"C_vs_Ctl"])
 is.de <- decideTests(edgeR_res_C_vs_Ctl)
 summary(is.de)
-topTags(edgeR_res_INPUT_vs_Ctl,n=10)$table 
-plotMD(edgeR_res_INPUT_vs_Ctl,
+topTags(edgeR_res_C_vs_Ctl,n=10)$table 
+plotMD(edgeR_res_C_vs_Ctl,
        status = is.de,
        values = c(1,-1),
        col = c("red","blue"),
@@ -694,7 +698,8 @@ bed_file <- list.files("/home/0",full.names = TRUE, pattern = "piR.+.bed", recur
 library(plyranges)
 pirbase <- read_bed(bed_file)
 
-piRbase_olaps <- DE_ranges_DESQ %>% join_overlap_left_directed(pirbase, minoverlap = 5) %>% 
+piRbase_olaps <- DE_ranges_voom %>% 
+  join_overlap_left_directed(pirbase, minoverlap = 5) %>% 
   filter(!is.na(name)) %>% 
   as_tibble() 
 
@@ -707,7 +712,8 @@ piRbase_olaps %>%
   inner_join(piRBnas) %>% 
   write_tsv(str_glue("{dat_path}/piRBase_DE_DESEQ2_common_{todate}_{my_exp}.txt"))
 
-piRNA_IPP <- list.files("/home/0",full.names = TRUE, pattern = "piRNAs316.txt", recursive = TRUE) %>% 
+piRNA_IPP <- list.files("/home/0",full.names = TRUE, pattern = "piRNAs316.txt",
+                        recursive = TRUE) %>% 
   read_tsv(col_names = FALSE) %>% 
   separate(X1, c("class", "piRNA"), sep = "_match_")
 
@@ -716,6 +722,55 @@ piRbase_olaps %>% filter(name %in% piRNA_IPP$piRNA)
 pirbase_red <- pirbase %>% 
   filter(name %in% piRNA_IPP$piRNA) %>% 
   as_tibble()
+# check all dataset-----
+complete_dat <- voom_res_C_vs_Ctl  %>%  
+  separate(smallRNA, c("seqnames", "start", "end", "width", "strand", "smallRNA","DQ"),sep = ":", convert = TRUE) %>% 
+   separate(DQ, c("DQ","GeneClass"), sep = "_") %>% 
+  plyranges::as_granges()
+
+piR_316 <- complete_dat %>% 
+  join_overlap_left_directed(pirbase_red, minoverlap = 5) %>% 
+  filter(!is.na(name)) %>% 
+  as_tibble() 
+
+## make tracks from SPORTS and SPAR workflow ----
+library(tidyverse)
+library(plyranges)
+#load the files
+bed_file <- list.files("/home/0",full.names = TRUE, pattern = "piR.+.bed", recursive = TRUE)
+piRNA_IPP <- list.files("/home/0",full.names = TRUE, pattern = "piRNAs316.txt",
+                        recursive = TRUE) %>% 
+  read_tsv(col_names = FALSE) %>% 
+  separate(X1, c("class", "piRNA"), sep = "_match_")
+BAM_IPP <- list.files("/home/0",full.names = TRUE, pattern = "1_sorted.bam",
+                        recursive = TRUE) %>% 
+  read_bam()
+BAM_IPP <- rbamtools::bamReader(list.files("/home/0",full.names = TRUE, pattern = "1_sorted.bam",
+                        recursive = TRUE), indexname = list.files("/home/0",full.names = TRUE, pattern = "1_sorted.bai",
+                        recursive = TRUE))
+rbamtools::createIndex(BAM_IPP, idx_filename="IPP_C_ab_1_sorted.bai")
+
+BAM_IPP <- list.files("/home/0",full.names = TRUE, pattern = "sorted.bed", recursive = TRUE) %>% read_bed
+pirbase <- read_bed(bed_file)
+pirbase316 <- pirbase %>% filter(name %in% piRNA_IPP$piRNA)
+
+sInfo <- Seqinfo(genome="hg38")
+seqlevels(sInfo) <- seqlevels(pirbase316)
+seqinfo(pirbase316)<- sInfo
+pirbase316 %>% write_bed("piRBase316.bed")
+write_bigwig("piRBase316.bigWig")
+
+peaks <- read_tsv(list.files("/home/0",full.names = TRUE, pattern = "peaks_all.xls",
+                recursive = TRUE)) %>% 
+  dplyr::rename(peakChr = "#peakChr") %>%  
+  select(peakChr:peakStrand) %>% 
+
+  as_granges(seqnames = peakChr,
+                         start = peakChrStart,
+                         end = peakChrEnd,
+                         strand = peakStrand) %>% 
+  arrange(start) %>% write_bed("peaks_all.bed")
+
 ```
 
 
