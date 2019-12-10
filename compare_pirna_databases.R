@@ -4,36 +4,157 @@ library(tidyverse)
 ## load pirnadb -----
 piRNA_dbs_files <- list.files("/home/0/piRNA_DBs", full.names = TRUE)
 # piRBase
-pirbase <- piRNA_dbs_files[2] %>% read_bed()
+pirbase <- piRNA_dbs_files[2] %>% 
+  read_bed() %>% 
+  as_tibble() %>% 
+  rename(pirbase = "name") %>% 
+  as_granges()
 # piRNADB
 pirnadb <- piRNA_dbs_files[5] %>% 
-  read_tsv(comment = "#", col_names = c("seqnames", "X2", "x3", "start", "end", "x6", "strand", "x7", "piRNA" )) %>% 
+  read_tsv(comment = "#", col_names = c("seqnames", "X2", "x3", "start", "end", "x6", "strand", "x7", "piRNAdb" )) %>% 
   select(-X2, -x3, -x6, -x7) %>% 
   mutate(seqnames = if_else(seqnames == "chrMT", "chrM", as.character(seqnames))) %>% 
   as_granges() %>% 
   arrange(start)
 # piRNADB cluster
 pirnadb_cl <- piRNA_dbs_files[4] %>% 
-  read_tsv() %>% select(-Build_Code) %>% mutate(Strand = if_else(Strand == "biDirectional","*", Strand),
+  read_tsv() %>% 
+  select(-Build_Code) %>% 
+  mutate(Strand = if_else(Strand == "biDirectional","*", Strand),
                                                 Chromosome = str_replace(.$Chromosome,"^", "chr")) %>% 
   as_granges(seqnames = Chromosome,
              start = Start,
              end = End, 
              strand = Strand
-             ) 
+             ) %>% 
+  arrange(start)
 # dashr DB cluster
-dashr_db <- piRNA_dbs_files[1] %>% read_tsv(col_names = F) %>%  as_granges(seqnames = X1,
-                                                                           start = X2,
-                                                                           end = X3, 
-                                                                           strand = X6) 
+dashr_db <- piRNA_dbs_files[1] %>% 
+  read_tsv(col_names = c("seqnames", 
+                         "start", 
+                         "end", 
+                         "dashr_srna", 
+                         "dashr_type",
+                         "strand")) %>% 
+  as_granges %>% 
+  arrange(start)
 # cluster db 
 pirna_cl_db <- piRNA_dbs_files[3] %>% 
   read_gff() %>% 
   as_tibble %>% 
   mutate(score = 1:length(.$score),
          seqnames = str_replace(.$seqnames,"^", "chr")) %>% 
-  unite(type, type:score) %>% 
+  unite(cl_db, type:score) %>% 
   select(-group, -phase, -source) %>% 
-  as_granges()
+  as_granges() %>% 
+  arrange(start)
 # check all databases to find overlaps
 pirna_cl_db %>% join_overlap_intersect_directed(pirnadb_cl)
+overlaps_3db <- dashr_db %>% 
+  join_overlap_intersect_directed(pirnadb, minoverlap = 15) %>% 
+  join_overlap_intersect_directed(pirbase, minoverlap = 15)
+
+
+# create a union of all dbs ------
+dashr_db_piRNA <- dashr_db %>% filter(dashr_type == "piRNA") %>% select(-dashr_type)
+
+dashr_db_piRNA_red <- dashr_db_piRNA %>% reduce_ranges_directed()
+
+pirbase_red <- pirbase %>% reduce_ranges_directed()
+
+pirnadb_red <- pirnadb %>% reduce_ranges_directed()
+
+# concat them and reduce
+pirna_DB_union <- c(dashr_db_piRNA_red, pirbase_red, pirnadb_red) %>% 
+  reduce_ranges_directed()
+rm(pirbase_red, pirnadb_red, dashr_db_piRNA_red)
+
+# make the file for the 3 dbds
+p_DB_U_dashr <- pirna_DB_union %>% 
+  join_overlap_left_directed(dashr_db_piRNA) %>% 
+  filter(!is.na(dashr_type)) %>% select(-dashr_type)
+
+p_DB_U_piRBase <- pirna_DB_union %>% 
+  join_overlap_left_directed(pirbase) %>% 
+  filter(!is.na(pirbase)) %>% select(-score)
+
+p_DB_U_pirnaDB <- pirna_DB_union %>% 
+  join_overlap_left_directed(pirnadb) %>% 
+  filter(!is.na(piRNAdb)) 
+
+# create the complete file
+pirna_DB_union_1 <- pirna_DB_union %>% 
+  as_tibble() %>% 
+  left_join(as_tibble(p_DB_U_dashr))
+
+pirna_DB_union_1 <- pirna_DB_union_1 %>% 
+  left_join(as_tibble(p_DB_U_pirnaDB))
+
+#pirna_DB_union_1 <- pirna_DB_union_1 %>% not working probably overflow
+  left_join(as_tibble(p_DB_U_piRBase)) 
+
+# filter for each db sequences are included in genes ----
+# keep the primary chromosomes
+primary_chrs <- c(str_c("chr",1:22),"chrX", "chrY", "chrM") %>% as_factor()
+#pirbase
+pirbase_red %>% as_tibble() %>% 
+  filter(seqnames %in% primary_chrs)  %>% 
+  group_by(seqnames) %>% 
+  summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
+                 median=median, Q3=~quantile(., probs = 0.75),
+                 max=max)) %>% 
+  arrange(as.character(seqnames)) %>% tail(20)
+# evaluating summary statistics we find that most of the regions
+# that are around ~34 base pairs for that reason we will remove 
+# all regions bigger than 39
+
+pirbase_short <- pirbase_red %>% 
+  as_tibble() %>% 
+  filter(seqnames %in% primary_chrs,  width < 40)
+#dashr
+dashr_db_piRNA_red %>% 
+  as_tibble() %>% 
+  filter(seqnames %in% primary_chrs)  %>% 
+  group_by(seqnames) %>% 
+  summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
+                                 median=median, Q3=~quantile(., probs = 0.75),
+                                 max=max)) %>% 
+  arrange(as.character(seqnames)) %>% tail(20)
+
+dashr_db_piRNA_short <- dashr_db_piRNA_red %>% 
+  as_tibble() %>% 
+  filter(seqnames %in% primary_chrs,  width < 40)
+#pirnadb
+pirnadb_red %>% 
+  as_tibble() %>% 
+  filter(seqnames %in% primary_chrs)  %>% 
+  group_by(seqnames) %>% 
+  summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
+                                 median=median, Q3=~quantile(., probs = 0.75),
+                                 max=max)) %>% 
+  arrange(as.character(seqnames)) %>% tail(20)
+
+pirnadb_red_short <- pirnadb_red %>% 
+  as_tibble() %>% 
+  filter(seqnames %in% primary_chrs,  width < 40)
+# concat them and reduce
+pirna_DB_union <- c(as_granges(dashr_db_piRNA_short), as_granges(pirbase_short), as_granges(pirnadb_red_short)) %>% 
+  reduce_ranges_directed()
+pirna_DB_union %>% as_tibble() %>% 
+  group_by(seqnames) %>% 
+  summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
+                                 median=median, Q3=~quantile(., probs = 0.75),
+                                 max=max)) %>% 
+  arrange(as.character(seqnames)) %>% tail(20)
+# make the file for the 3 dbds
+p_DB_U_dashr <- pirna_DB_union %>% 
+  join_overlap_left_directed(dashr_db_piRNA) %>% 
+  filter(!is.na(dashr_type))
+
+ pirna_DB_union %>% 
+  join_overlap_left_directed(pirbase) %>% 
+  filter(!is.na(pirbase)) %>% select(-score)
+
+p_DB_U_pirnaDB <- pirna_DB_union %>% 
+  join_overlap_left_directed(pirnadb) %>% 
+  filter(!is.na(piRNAdb)) 
