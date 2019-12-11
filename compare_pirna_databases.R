@@ -8,12 +8,15 @@ pirbase <- piRNA_dbs_files[2] %>%
   read_bed() %>% 
   as_tibble() %>% 
   rename(pirbase = "name") %>% 
+  select(-score) %>% 
+  mutate(pirbase_coor = str_c(.$pirbase, .$seqnames, .$start, .$end, .$strand, sep = "_")) %>% 
   as_granges()
 # piRNADB
 pirnadb <- piRNA_dbs_files[5] %>% 
   read_tsv(comment = "#", col_names = c("seqnames", "X2", "x3", "start", "end", "x6", "strand", "x7", "piRNAdb" )) %>% 
   select(-X2, -x3, -x6, -x7) %>% 
   mutate(seqnames = if_else(seqnames == "chrMT", "chrM", as.character(seqnames))) %>% 
+  mutate(pirnadb_coor = str_c(.$piRNAdb, .$seqnames, .$start, .$end, .$strand, sep = "_")) %>% 
   as_granges() %>% 
   arrange(start)
 # piRNADB cluster
@@ -27,7 +30,8 @@ pirnadb_cl <- piRNA_dbs_files[4] %>%
              end = End, 
              strand = Strand
              ) %>% 
-  arrange(start)
+  arrange(start) %>% 
+  keepStandardChromosomes(pruning.mode="coarse")
 # dashr DB cluster
 dashr_db <- piRNA_dbs_files[1] %>% 
   read_tsv(col_names = c("seqnames", 
@@ -36,6 +40,7 @@ dashr_db <- piRNA_dbs_files[1] %>%
                          "dashr_srna", 
                          "dashr_type",
                          "strand")) %>% 
+  mutate(dashr_srna_coor = str_c(.$dashr_srna, .$seqnames, .$start, .$end, .$strand, sep = "_")) %>% 
   as_granges %>% 
   arrange(start)
 # cluster db 
@@ -47,7 +52,8 @@ pirna_cl_db <- piRNA_dbs_files[3] %>%
   unite(cl_db, type:score) %>% 
   select(-group, -phase, -source) %>% 
   as_granges() %>% 
-  arrange(start)
+  arrange(start) %>% 
+  keepStandardChromosomes(pruning.mode="coarse")
 # check all databases to find overlaps
 pirna_cl_db %>% join_overlap_intersect_directed(pirnadb_cl)
 overlaps_3db <- dashr_db %>% 
@@ -67,12 +73,12 @@ pirnadb_red <- pirnadb %>% reduce_ranges_directed()
 # concat them and reduce
 pirna_DB_union <- c(dashr_db_piRNA_red, pirbase_red, pirnadb_red) %>% 
   reduce_ranges_directed()
-rm(pirbase_red, pirnadb_red, dashr_db_piRNA_red)
+#rm(pirbase_red, pirnadb_red, dashr_db_piRNA_red)
 
 # make the file for the 3 dbds
-p_DB_U_dashr <- pirna_DB_union %>% 
-  join_overlap_left_directed(dashr_db_piRNA) %>% 
-  filter(!is.na(dashr_type)) %>% select(-dashr_type)
+#p_DB_U_dashr <- pirna_DB_union %>% 
+#  join_overlap_left_directed(dashr_db_piRNA) %>% 
+#  filter(!is.na(dashr_type)) %>% select(-dashr_type)
 
 p_DB_U_piRBase <- pirna_DB_union %>% 
   join_overlap_left_directed(pirbase) %>% 
@@ -95,10 +101,10 @@ pirna_DB_union_1 <- pirna_DB_union_1 %>%
 
 # filter for each db sequences are included in genes ----
 # keep the primary chromosomes
-primary_chrs <- c(str_c("chr",1:22),"chrX", "chrY", "chrM") %>% as_factor()
 #pirbase
-pirbase_red %>% as_tibble() %>% 
-  filter(seqnames %in% primary_chrs)  %>% 
+pirbase_red %>% 
+    keepStandardChromosomes(pruning.mode="coarse") %>% 
+    as_tibble() %>% 
   group_by(seqnames) %>% 
   summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
                  median=median, Q3=~quantile(., probs = 0.75),
@@ -109,12 +115,13 @@ pirbase_red %>% as_tibble() %>%
 # all regions bigger than 39
 
 pirbase_short <- pirbase_red %>% 
+  keepStandardChromosomes(pruning.mode="coarse") %>% 
   as_tibble() %>% 
-  filter(seqnames %in% primary_chrs,  width < 40)
+  filter(width < 40)
 #dashr
 dashr_db_piRNA_red %>% 
+  keepStandardChromosomes(pruning.mode="coarse") %>% 
   as_tibble() %>% 
-  filter(seqnames %in% primary_chrs)  %>% 
   group_by(seqnames) %>% 
   summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
                                  median=median, Q3=~quantile(., probs = 0.75),
@@ -122,12 +129,13 @@ dashr_db_piRNA_red %>%
   arrange(as.character(seqnames)) %>% tail(20)
 
 dashr_db_piRNA_short <- dashr_db_piRNA_red %>% 
+  keepStandardChromosomes(pruning.mode="coarse") %>% 
   as_tibble() %>% 
-  filter(seqnames %in% primary_chrs,  width < 40)
+  filter(width < 40)
 #pirnadb
 pirnadb_red %>% 
+  keepStandardChromosomes(pruning.mode="coarse") %>% 
   as_tibble() %>% 
-  filter(seqnames %in% primary_chrs)  %>% 
   group_by(seqnames) %>% 
   summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
                                  median=median, Q3=~quantile(., probs = 0.75),
@@ -135,11 +143,12 @@ pirnadb_red %>%
   arrange(as.character(seqnames)) %>% tail(20)
 
 pirnadb_red_short <- pirnadb_red %>% 
+  keepStandardChromosomes(pruning.mode="coarse") %>% 
   as_tibble() %>% 
-  filter(seqnames %in% primary_chrs,  width < 40)
+  filter(width < 40)
 # concat them and reduce
 pirna_DB_union <- c(as_granges(dashr_db_piRNA_short), as_granges(pirbase_short), as_granges(pirnadb_red_short)) %>% 
-  reduce_ranges_directed()
+  reduce_ranges_directed() %>%  keepStandardChromosomes(pruning.mode="coarse")
 pirna_DB_union %>% as_tibble() %>% 
   group_by(seqnames) %>% 
   summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
@@ -147,14 +156,18 @@ pirna_DB_union %>% as_tibble() %>%
                                  max=max)) %>% 
   arrange(as.character(seqnames)) %>% tail(20)
 # make the file for the 3 dbds
-p_DB_U_dashr <- pirna_DB_union %>% 
+p_DB_U <- pirna_DB_union %>% 
   join_overlap_left_directed(dashr_db_piRNA) %>% 
-  filter(!is.na(dashr_type))
-
- pirna_DB_union %>% 
-  join_overlap_left_directed(pirbase) %>% 
-  filter(!is.na(pirbase)) %>% select(-score)
-
-p_DB_U_pirnaDB <- pirna_DB_union %>% 
   join_overlap_left_directed(pirnadb) %>% 
-  filter(!is.na(piRNAdb)) 
+  join_overlap_left_directed(pirbase) %>% 
+  join_overlap_left_directed(pirnadb_cl) %>%
+  join_overlap_left_directed(pirna_cl_db)
+# find gene / transcript regions -----
+library(TxDb.Hsapiens.UCSC.hg38.knownGene);library(org.Hs.eg.db)
+txd <- TxDb.Hsapiens.UCSC.hg38.knownGene
+library(bumphunter)
+genes <- annotateTranscripts(TxDb.Hsapiens.UCSC.hg38.knownGene,annotation="org.Hs.eg.db")
+#annotated_peaks <- matchGenes(p_DB_U, genes, type = "any", promoterDist = 2500, skipExons = FALSE, verbose = TRUE) %>% as_tibble()
+
+p_DB_U_chr11 <- p_DB_U %>% filter(seqnames == "chr11")
+annotated_peaks_chr11 <- matchGenes(p_DB_U_chr11, genes, type = "any", promoterDist = 2500, skipExons = FALSE, verbose = TRUE) %>% as_tibble()
