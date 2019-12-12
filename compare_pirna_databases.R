@@ -199,45 +199,46 @@ test_genes_1 <- test_genes_1 %>%
   bind_cols(as_tibble(test1)) %>% 
   dplyr::select(name:subjectHits,rnaID)
 # find how many threads you are going to use -----
-seq(1,77000,by= 6500)
-length(p_DB_U_chr[[15]]) %/% 13
+length(p_DB_U_chr[[23]]) %/% 15
 
-(l_chr <- plyr::round_any(length(p_DB_U_chr[[15]]), 100, ceiling) ) 
-(l_chr %/% 13)
+(l_chr <- plyr::round_any(length(p_DB_U_chr[[23]]), 10, ceiling)) 
+(l_chr %/% 14)
 
-(chunks_chr <- seq(1,l_chr, by = l_chr %/% 12))
-map()
+(chunks_chr <- seq(1,l_chr, by = l_chr %/% 14))
 
+p_DB_U_chr_1 <- p_DB_U_chr[[23]][chunks_chr[1]:(chunks_chr[2]-1)]
+p_DB_U_chr_2 <- p_DB_U_chr[[23]][chunks_chr[2]:(chunks_chr[3]-1)]
+p_DB_U_chr_3 <- p_DB_U_chr[[23]][chunks_chr[3]:(chunks_chr[4]-1)]
+p_DB_U_chr_4 <- p_DB_U_chr[[23]][chunks_chr[4]:(chunks_chr[5]-1)]
+p_DB_U_chr_5 <- p_DB_U_chr[[23]][chunks_chr[5]:(chunks_chr[6]-1)]
+p_DB_U_chr_6 <- p_DB_U_chr[[23]][chunks_chr[6]:(chunks_chr[7]-1)]
+p_DB_U_chr_7 <- p_DB_U_chr[[23]][chunks_chr[7]:(chunks_chr[8]-1)]
+p_DB_U_chr_8 <- p_DB_U_chr[[23]][chunks_chr[8]:(chunks_chr[9]-1)]
+p_DB_U_chr_9 <- p_DB_U_chr[[23]][chunks_chr[9]:(chunks_chr[10]-1)]
+p_DB_U_chr_10 <- p_DB_U_chr[[23]][chunks_chr[10]:(chunks_chr[11]-1)]
+p_DB_U_chr_11 <- p_DB_U_chr[[23]][chunks_chr[11]:(chunks_chr[12]-1)]
+p_DB_U_chr_12 <- p_DB_U_chr[[23]][chunks_chr[12]:(chunks_chr[13]-1)]
+p_DB_U_chr_13 <- p_DB_U_chr[[23]][chunks_chr[13]:(chunks_chr[14]-1)]
+p_DB_U_chr_14 <- p_DB_U_chr[[23]][chunks_chr[14]:length(p_DB_U_chr[[23]])]
 
-p_DB_U_chr_22_1 <- p_DB_U_chr[[15]][chunks_chr[1]:chunks_chr[2]-1]
-p_DB_U_chr_22_2 <- p_DB_U_chr[[15]][chunks_chr[2]:chunks_chr[3]-1]
-p_DB_U_chr_22_3 <- p_DB_U_chr[[15]][chunks_chr[3]:chunks_chr[4]-1]
-p_DB_U_chr_22_4 <- p_DB_U_chr[[15]][chunks_chr[4]:chunks_chr[5]-1]
-p_DB_U_chr_22_5 <- p_DB_U_chr[[15]][chunks_chr[5]:chunks_chr[6]-1]
-p_DB_U_chr_22_6 <- p_DB_U_chr[[15]][chunks_chr[6]:chunks_chr[7]-1]
-p_DB_U_chr_22_7 <- p_DB_U_chr[[15]][chunks_chr[7]:chunks_chr[8]-1]
-p_DB_U_chr_22_8 <- p_DB_U_chr[[15]][chunks_chr[8]:chunks_chr[9]-1]
-p_DB_U_chr_22_9 <- p_DB_U_chr[[15]][chunks_chr[9]:chunks_chr[10]-1]
-p_DB_U_chr_22_10 <- p_DB_U_chr[[15]][chunks_chr[10]:chunks_chr[11]-1]
-p_DB_U_chr_22_11 <- p_DB_U_chr[[15]][chunks_chr[11]:chunks_chr[12]-1]
-p_DB_U_chr_22_12 <- p_DB_U_chr[[15]][chunks_chr[12]:length(p_DB_U_chr[[15]])]
+#p_DB_U_chr_1_13 <- p_DB_U_chr[[1]][300001:325000]
+#p_DB_U_chr_1_14 <- p_DB_U_chr[[1]][325001:338735]
 
-p_DB_U_chr_1_13 <- p_DB_U_chr[[1]][300001:325000]
-p_DB_U_chr_1_14 <- p_DB_U_chr[[1]][325001:338735]
+test15_chrM <- list(p_DB_U_chr_1, p_DB_U_chr_2, 
+                    p_DB_U_chr_3, p_DB_U_chr_4,
+                    p_DB_U_chr_5, p_DB_U_chr_6,
+                    p_DB_U_chr_7, p_DB_U_chr_8,
+                    p_DB_U_chr_9, p_DB_U_chr_10,
+                    p_DB_U_chr_11, p_DB_U_chr_12,
+                    p_DB_U_chr_13, p_DB_U_chr_14)
 
-test4_chr22 <- list(p_DB_U_chr_22_1, p_DB_U_chr_22_2, 
-                   p_DB_U_chr_22_3, p_DB_U_chr_22_4,
-                   p_DB_U_chr_22_5, p_DB_U_chr_22_6,
-                   p_DB_U_chr_22_7, p_DB_U_chr_22_8,
-                   p_DB_U_chr_22_9, p_DB_U_chr_22_10,
-                   p_DB_U_chr_22_11, p_DB_U_chr_22_12)
-
-rm(p_DB_U_chr_22_1, p_DB_U_chr_22_2, 
-p_DB_U_chr_22_3, p_DB_U_chr_22_4,
-p_DB_U_chr_22_5, p_DB_U_chr_22_6,
-p_DB_U_chr_22_7, p_DB_U_chr_22_8,
-p_DB_U_chr_22_9, p_DB_U_chr_22_10,
-p_DB_U_chr_22_11, p_DB_U_chr_22_12)
+rm(p_DB_U_chr_1, p_DB_U_chr_2, 
+   p_DB_U_chr_3, p_DB_U_chr_4,
+   p_DB_U_chr_5, p_DB_U_chr_6,
+   p_DB_U_chr_7, p_DB_U_chr_8,
+   p_DB_U_chr_9, p_DB_U_chr_10,
+   p_DB_U_chr_11, p_DB_U_chr_12,
+   p_DB_U_chr_13, p_DB_U_chr_14)
 # chr1-----
 mt_param <- MulticoreParam(workers = 14)
 test_genes_3_chr1 <- bplapply(test3_chr1, fun, BPPARAM = mt_param)
@@ -287,4 +288,274 @@ chr_21_Y_1_22_18 <- bind_rows(test_genes_1,test_genes_2,test_genes_3_chr1,test_g
 p_DB_U %>% 
   as_tibble %>% 
   inner_join(chr_21_Y_1_22_18, by = "rnaID") %>% 
-  write_tsv("all_DB_genes_chr_21_Y_1_22.txt")
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18.txt")
+# chr20 ----
+mt_param <- MulticoreParam(workers = 12)
+
+test_genes_6_chr20 <- bplapply(test6_chr20, fun, BPPARAM = mt_param)
+
+test6_chr20 <- bind_ranges(test6_chr20)
+
+test_genes_6_chr20 <- test_genes_6_chr20 %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test6_chr20)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20 <- bind_rows(test_genes_1,
+                              test_genes_2,
+                              test_genes_3_chr1,
+                              test_genes_4_chr22, 
+                              test_genes_5_chr18,
+                              test_genes_6_chr20)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20.txt")
+# chr13 ----
+mt_param <- MulticoreParam(workers = 14)
+
+test_genes_7_chr13 <- bplapply(test7_chr13, fun, BPPARAM = mt_param)
+
+test7_chr13 <- bind_ranges(test7_chr13)
+
+test_genes_7_chr13 <- test_genes_7_chr13 %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test7_chr13)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20_13 <- bind_rows(test_genes_1,
+                                 test_genes_2,
+                                 test_genes_3_chr1,
+                                 test_genes_4_chr22, 
+                                 test_genes_5_chr18,
+                                 test_genes_6_chr20,
+                                 test_genes_7_chr13)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13.txt")
+# chr14 ----
+mt_param <- MulticoreParam(workers = 14)
+
+test_genes_8_chr14 <- bplapply(test8_chr14, fun, BPPARAM = mt_param)
+
+test8_chr14 <- bind_ranges(test8_chr14)
+
+test_genes_8_chr14 <- test_genes_8_chr14 %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test8_chr14)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20_13_14 <- bind_rows(test_genes_1,
+                                    test_genes_2,
+                                    test_genes_3_chr1,
+                                    test_genes_4_chr22, 
+                                    test_genes_5_chr18,
+                                    test_genes_6_chr20,
+                                    test_genes_7_chr13,
+                                    test_genes_8_chr14)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14.txt")
+# chr19 ----
+mt_param <- MulticoreParam(workers = 14)
+
+test_genes_9_chr19 <- bplapply(test9_chr19, fun, BPPARAM = mt_param)
+
+test9_chr19 <- bind_ranges(test9_chr19)
+
+test_genes_9_chr19 <- test_genes_9_chr19 %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test9_chr19)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20_13_14_19 <- bind_rows(test_genes_1,
+                                       test_genes_2,
+                                       test_genes_3_chr1,
+                                       test_genes_4_chr22, 
+                                       test_genes_5_chr18,
+                                       test_genes_6_chr20,
+                                       test_genes_7_chr13,
+                                       test_genes_8_chr14,
+                                       test_genes_9_chr19)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19.txt")
+# chr16 ----
+mt_param <- MulticoreParam(workers = 14)
+
+test_genes_10_chr16 <- bplapply(test10_chr16, fun, BPPARAM = mt_param)
+
+test10_chr16 <- bind_ranges(test10_chr16)
+
+test_genes_10_chr16 <- test_genes_10_chr16 %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test10_chr16)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20_13_14_19_16 <- bind_rows(test_genes_1,
+                                          test_genes_2,
+                                          test_genes_3_chr1,
+                                          test_genes_4_chr22, 
+                                          test_genes_5_chr18,
+                                          test_genes_6_chr20,
+                                          test_genes_7_chr13,
+                                          test_genes_8_chr14,
+                                          test_genes_9_chr19,
+                                          test_genes_10_chr16)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16.txt")
+# chr15 ----
+mt_param <- MulticoreParam(workers = 14)
+
+test_genes_11_chr15 <- bplapply(test11_chr15, fun, BPPARAM = mt_param)
+
+test11_chr15 <- bind_ranges(test11_chr15)
+
+test_genes_11_chr15 <- test_genes_11_chr15 %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test11_chr15)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15 <- bind_rows(test_genes_1,
+                                             test_genes_2,
+                                             test_genes_3_chr1,
+                                             test_genes_4_chr22, 
+                                             test_genes_5_chr18,
+                                             test_genes_6_chr20,
+                                             test_genes_7_chr13,
+                                             test_genes_8_chr14,
+                                             test_genes_9_chr19,
+                                             test_genes_10_chr16,
+                                             test_genes_11_chr15)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15.txt")
+# annotate for each ----
+annotate_fun <- function(x_1) {
+  test_genes_chr <- bplapply(x_1, fun, BPPARAM = mt_param)
+  message("bind the ranges")
+  x_1 <- bind_ranges(x_1)
+  message("make the final tibble")
+  test_genes_chr <- test_genes_chr %>%
+    bind_rows() %>% 
+    bind_cols(as_tibble(x_1)) %>% 
+    dplyr::select(name:subjectHits,rnaID)
+  test_genes_chr
+}
+# chr17 ----
+mt_param <- MulticoreParam(workers = 14)
+
+test_genes_12_chr17 <- bplapply(test12_chr17, fun, BPPARAM = mt_param)
+
+test12_chr17 <- bind_ranges(test12_chr17)
+
+test_genes_12_chr17 <- test_genes_12_chr17 %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test12_chr17)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17 <- bind_rows(test_genes_1,
+                                             test_genes_2,
+                                             test_genes_3_chr1,
+                                             test_genes_4_chr22, 
+                                             test_genes_5_chr18,
+                                             test_genes_6_chr20,
+                                             test_genes_7_chr13,
+                                             test_genes_8_chr14,
+                                             test_genes_9_chr19,
+                                             test_genes_10_chr16,
+                                             test_genes_11_chr15,
+                                             test_genes_12_chr1)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17.txt")
+# chr8 ----
+mt_param <- MulticoreParam(workers = 14)
+
+test_genes_13_chr8 <- bplapply(test13_chr8, fun, BPPARAM = mt_param)
+
+test13_chr8 <- bind_ranges(test13_chr8)
+
+test_genes_13_chr8 <- test_genes_13_chr8 %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test13_chr8)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8 <- bind_rows(test_genes_1,
+                                                   test_genes_2,
+                                                   test_genes_3_chr1,
+                                                   test_genes_4_chr22, 
+                                                   test_genes_5_chr18,
+                                                   test_genes_6_chr20,
+                                                   test_genes_7_chr13,
+                                                   test_genes_8_chr14,
+                                                   test_genes_9_chr19,
+                                                   test_genes_10_chr16,
+                                                   test_genes_11_chr15,
+                                                   test_genes_12_chr17,
+                                                   test_genes_13_chr8)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8.txt")
+
+# chrX ----
+mt_param <- MulticoreParam(workers = 14)
+
+test_genes_14_chrX <- bplapply(test14_chrX, fun, BPPARAM = mt_param)
+
+test14_chrX <- bind_ranges(test14_chrX)
+
+test_genes_14_chrX <- test_genes_14_chrX %>%
+  bind_rows() %>% 
+  bind_cols(as_tibble(test14_chrX)) %>% 
+  dplyr::select(name:subjectHits,rnaID)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X <- bind_rows(test_genes_1,
+                                                     test_genes_2,
+                                                     test_genes_3_chr1,
+                                                     test_genes_4_chr22, 
+                                                     test_genes_5_chr18,
+                                                     test_genes_6_chr20,
+                                                     test_genes_7_chr13,
+                                                     test_genes_8_chr14,
+                                                     test_genes_9_chr19,
+                                                     test_genes_10_chr16,
+                                                     test_genes_11_chr15,
+                                                     test_genes_12_chr17,
+                                                     test_genes_13_chr8,
+                                                     test_genes_14_chrX)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X.txt")
+
+
+# chrM ----
+test_genes_15_chrM <- annotate_fun(test15_chrM)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X <- bind_rows(test_genes_1,
+                                                       test_genes_2,
+                                                       test_genes_3_chr1,
+                                                       test_genes_4_chr22, 
+                                                       test_genes_5_chr18,
+                                                       test_genes_6_chr20,
+                                                       test_genes_7_chr13,
+                                                       test_genes_8_chr14,
+                                                       test_genes_9_chr19,
+                                                       test_genes_10_chr16,
+                                                       test_genes_11_chr15,
+                                                       test_genes_12_chr17,
+                                                       test_genes_13_chr8,
+                                                       test_genes_14_chrX)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X.txt")
