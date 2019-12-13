@@ -635,11 +635,11 @@ p_DB_U %>%
   inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11, by = "rnaID") %>% 
   write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11.txt")
 # chr2 ----
-test18_chr2 <- slice_dataframe_fun(,100)
-identical(length(p_DB_U_chr[[]]), length(bind_ranges(test18_chr2)))
+test18_chr2 <- slice_dataframe_fun(12,100)
+identical(length(p_DB_U_chr[[12]]), length(bind_ranges(test18_chr2)))
 test_genes_18_chr2 <- annotate_fun(test18_chr2)
 
-chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11 <- bind_rows(test_genes_1,
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2 <- bind_rows(test_genes_1,
                                                               test_genes_2,
                                                               test_genes_3_chr1,
                                                               test_genes_4_chr22, 
@@ -661,3 +661,223 @@ p_DB_U %>%
   as_tibble %>% 
   inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2, by = "rnaID") %>% 
   write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2.txt")
+# chr3 ----
+test19_chr3 <- slice_dataframe_fun(16,100)
+identical(length(p_DB_U_chr[[16]]), length(bind_ranges(test19_chr3)))
+test_genes_19_chr3 <- annotate_fun(test19_chr3)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3 <- bind_rows(test_genes_1,
+                                                                test_genes_2,
+                                                                test_genes_3_chr1,
+                                                                test_genes_4_chr22, 
+                                                                test_genes_5_chr18,
+                                                                test_genes_6_chr20,
+                                                                test_genes_7_chr13,
+                                                                test_genes_8_chr14,
+                                                                test_genes_9_chr19,
+                                                                test_genes_10_chr16,
+                                                                test_genes_11_chr15,
+                                                                test_genes_12_chr17,
+                                                                test_genes_13_chr8,
+                                                                test_genes_14_chrX,
+                                                                test_genes_15_chrM,
+                                                                test_genes_16_chr9,
+                                                                test_genes_17_chr11,
+                                                                test_genes_18_chr2,
+                                                                test_genes_19_chr3)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3.txt")
+# chr7 ----
+test20_chr7 <- slice_dataframe_fun(20,100)
+identical(length(p_DB_U_chr[[20]]), length(bind_ranges(test20_chr7)))
+test_genes_20_chr7 <- annotate_fun(test20_chr7)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7 <- bind_rows(test_genes_1,
+                                                                   test_genes_2,
+                                                                   test_genes_3_chr1,
+                                                                   test_genes_4_chr22, 
+                                                                   test_genes_5_chr18,
+                                                                   test_genes_6_chr20,
+                                                                   test_genes_7_chr13,
+                                                                   test_genes_8_chr14,
+                                                                   test_genes_9_chr19,
+                                                                   test_genes_10_chr16,
+                                                                   test_genes_11_chr15,
+                                                                   test_genes_12_chr17,
+                                                                   test_genes_13_chr8,
+                                                                   test_genes_14_chrX,
+                                                                   test_genes_15_chrM,
+                                                                   test_genes_16_chr9,
+                                                                   test_genes_17_chr11,
+                                                                   test_genes_18_chr2,
+                                                                   test_genes_19_chr3,
+                                                                   test_genes_20_chr7)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7.txt")
+# chr4 ----
+test21_chr4 <- slice_dataframe_fun(17,100)
+identical(length(p_DB_U_chr[[17]]), length(bind_ranges(test21_chr4)))
+test_genes_21_chr4 <- annotate_fun(test21_chr4)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4 <- bind_rows(test_genes_1,
+                                                                    test_genes_2,
+                                                                    test_genes_3_chr1,
+                                                                    test_genes_4_chr22, 
+                                                                    test_genes_5_chr18,
+                                                                    test_genes_6_chr20,
+                                                                    test_genes_7_chr13,
+                                                                    test_genes_8_chr14,
+                                                                    test_genes_9_chr19,
+                                                                    test_genes_10_chr16,
+                                                                    test_genes_11_chr15,
+                                                                    test_genes_12_chr17,
+                                                                    test_genes_13_chr8,
+                                                                    test_genes_14_chrX,
+                                                                    test_genes_15_chrM,
+                                                                    test_genes_16_chr9,
+                                                                    test_genes_17_chr11,
+                                                                    test_genes_18_chr2,
+                                                                    test_genes_19_chr3,
+                                                                    test_genes_20_chr7,
+                                                                    test_genes_21_chr4)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4.txt")
+# chr5 ----
+test22_chr5 <- slice_dataframe_fun(18,100)
+identical(length(p_DB_U_chr[[18]]), length(bind_ranges(test22_chr5)))
+test_genes_22_chr5 <- annotate_fun(test22_chr5)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5 <- bind_rows(test_genes_1,
+                                                                      test_genes_2,
+                                                                      test_genes_3_chr1,
+                                                                      test_genes_4_chr22, 
+                                                                      test_genes_5_chr18,
+                                                                      test_genes_6_chr20,
+                                                                      test_genes_7_chr13,
+                                                                      test_genes_8_chr14,
+                                                                      test_genes_9_chr19,
+                                                                      test_genes_10_chr16,
+                                                                      test_genes_11_chr15,
+                                                                      test_genes_12_chr17,
+                                                                      test_genes_13_chr8,
+                                                                      test_genes_14_chrX,
+                                                                      test_genes_15_chrM,
+                                                                      test_genes_16_chr9,
+                                                                      test_genes_17_chr11,
+                                                                      test_genes_18_chr2,
+                                                                      test_genes_19_chr3,
+                                                                      test_genes_20_chr7,
+                                                                      test_genes_21_chr4,
+                                                                      test_genes_22_chr5)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5.txt")
+# chr6 ----
+test23_chr6 <- slice_dataframe_fun(19,100)
+identical(length(p_DB_U_chr[[19]]), length(bind_ranges(test23_chr6)))
+test_genes_23_chr6 <- annotate_fun(test23_chr6)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5_6 <- bind_rows(test_genes_1,
+                                                                        test_genes_2,
+                                                                        test_genes_3_chr1,
+                                                                        test_genes_4_chr22, 
+                                                                        test_genes_5_chr18,
+                                                                        test_genes_6_chr20,
+                                                                        test_genes_7_chr13,
+                                                                        test_genes_8_chr14,
+                                                                        test_genes_9_chr19,
+                                                                        test_genes_10_chr16,
+                                                                        test_genes_11_chr15,
+                                                                        test_genes_12_chr17,
+                                                                        test_genes_13_chr8,
+                                                                        test_genes_14_chrX,
+                                                                        test_genes_15_chrM,
+                                                                        test_genes_16_chr9,
+                                                                        test_genes_17_chr11,
+                                                                        test_genes_18_chr2,
+                                                                        test_genes_19_chr3,
+                                                                        test_genes_20_chr7,
+                                                                        test_genes_21_chr4,
+                                                                        test_genes_22_chr5,
+                                                                        test_genes_23_chr6)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5_6, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5_6.txt")
+# chr12 ----
+test24_chr12 <- slice_dataframe_fun(4,100)
+identical(length(p_DB_U_chr[[4]]), length(bind_ranges(test24_chr12)))
+test_genes_24_chr12 <- annotate_fun(test24_chr12)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5_6_12 <- bind_rows(test_genes_1,
+                                                                          test_genes_2,
+                                                                          test_genes_3_chr1,
+                                                                          test_genes_4_chr22, 
+                                                                          test_genes_5_chr18,
+                                                                          test_genes_6_chr20,
+                                                                          test_genes_7_chr13,
+                                                                          test_genes_8_chr14,
+                                                                          test_genes_9_chr19,
+                                                                          test_genes_10_chr16,
+                                                                          test_genes_11_chr15,
+                                                                          test_genes_12_chr17,
+                                                                          test_genes_13_chr8,
+                                                                          test_genes_14_chrX,
+                                                                          test_genes_15_chrM,
+                                                                          test_genes_16_chr9,
+                                                                          test_genes_17_chr11,
+                                                                          test_genes_18_chr2,
+                                                                          test_genes_19_chr3,
+                                                                          test_genes_20_chr7,
+                                                                          test_genes_21_chr4,
+                                                                          test_genes_22_chr5,
+                                                                          test_genes_23_chr6,
+                                                                          test_genes_24_chr12)
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5_6_12, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5_6_12.txt")
+# chr10 ----
+test25_chr10 <- slice_dataframe_fun(2,100)
+identical(length(p_DB_U_chr[[2]]), length(bind_ranges(test25_chr10)))
+test_genes_25_chr10 <- annotate_fun(test25_chr10)
+
+chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5_6_12_10 <- bind_rows(
+  test_genes_3_chr1,
+  test_genes_18_chr2,
+  test_genes_19_chr3,
+  test_genes_21_chr4,
+  test_genes_22_chr5,
+  test_genes_23_chr6,
+  test_genes_20_chr7,
+  test_genes_13_chr8,
+  test_genes_16_chr9,
+  test_genes_25_chr10,
+  test_genes_17_chr11,
+  test_genes_24_chr12,
+  test_genes_7_chr13,
+  test_genes_8_chr14,
+  test_genes_11_chr15,
+  test_genes_10_chr16,
+  test_genes_12_chr17,
+  test_genes_5_chr18,
+  test_genes_9_chr19,
+  test_genes_6_chr20,
+  test_genes_1,
+  test_genes_4_chr22, 
+  test_genes_14_chrX,
+  test_genes_2,
+  test_genes_15_chrM)
+ 
+p_DB_U %>% 
+  as_tibble %>% 
+  inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15_17_8_X_M_9_11_2_3_7_4_5_6_12_10, by = "rnaID") %>% 
+  write_tsv("all_DB_genes_chr_all.txt")
+
