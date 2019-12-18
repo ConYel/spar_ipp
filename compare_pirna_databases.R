@@ -1,7 +1,7 @@
 ## load libraries -----
 library(plyranges)
 library(tidyverse)
-## load pirnadb -----
+## load pirnadbs -----
 piRNA_dbs_files <- list.files("/home/0/piRNA_DBs", full.names = TRUE)
 # piRBase
 pirbase <- piRNA_dbs_files[2] %>% 
@@ -10,15 +10,17 @@ pirbase <- piRNA_dbs_files[2] %>%
   rename(pirbase = "name") %>% 
   select(-score) %>% 
   mutate(pirbase_coor = str_c(.$pirbase, .$seqnames, .$start, .$end, .$strand, sep = "_")) %>% 
-  as_granges()
+  as_granges() %>% 
+  keepStandardChromosomes(pruning.mode="coarse")
 # piRNADB
 pirnadb <- piRNA_dbs_files[5] %>% 
-  read_tsv(comment = "#", col_names = c("seqnames", "X2", "x3", "start", "end", "x6", "strand", "x7", "piRNAdb" )) %>% 
-  select(-X2, -x3, -x6, -x7) %>% 
+  read_tsv(comment = "#", col_names = c("seqnames", "x2", "x3", "start", "end", "x6", "strand", "x7", "piRNAdb" )) %>% 
+  select(-x2, -x3, -x6, -x7) %>% 
   mutate(seqnames = if_else(seqnames == "chrMT", "chrM", as.character(seqnames))) %>% 
   mutate(pirnadb_coor = str_c(.$piRNAdb, .$seqnames, .$start, .$end, .$strand, sep = "_")) %>% 
   as_granges() %>% 
-  arrange(start)
+  arrange(start) %>% 
+  keepStandardChromosomes(pruning.mode="coarse")
 # piRNADB cluster
 pirnadb_cl <- piRNA_dbs_files[4] %>% 
   read_tsv() %>% 
@@ -42,7 +44,8 @@ dashr_db <- piRNA_dbs_files[1] %>%
                          "strand")) %>% 
   mutate(dashr_srna_coor = str_c(.$dashr_srna, .$seqnames, .$start, .$end, .$strand, sep = "_")) %>% 
   as_granges %>% 
-  arrange(start)
+  arrange(start) %>% 
+  keepStandardChromosomes(pruning.mode="coarse")
 # cluster db 
 pirna_cl_db <- piRNA_dbs_files[3] %>% 
   read_gff() %>% 
@@ -883,9 +886,7 @@ p_DB_U %>%
 
 
 map() %>% bind_rows(.id = .x)
-
-
-
+# summarize stats for the dbs -----
 dbs <- read_tsv("/home/0/IPP/spar_ipp/all_DB_genes_chr_all.txt", col_names = TRUE, 
                 col_types = cols(
                   .default = col_character(),
@@ -932,5 +933,92 @@ dbs %>% group_by(rnaID) %>% summarise(n = dplyr::n()) %>%
 summarise_at(vars(n) ,list(min = min, Q1=~quantile(., probs = 0.25),
                                median=median, Q3=~quantile(., probs = 0.75),
                                max=max))
-  
-summr_rnaID <- dbs %>% group_by(rnaID) %>% summarise(dplyr::n())
+summr_rnaID <- dbs %>% group_by(rnaID) %>% 
+  summarise(n = dplyr::n()) %>% arrange(desc(n))
+dbs %>% filter(rnaID == "RNA3141770") 
+dbs %>% filter(rnaID == "RNA3141770") %>% select(dashr_srna) %>% deframe %>% as_factor() %>% levels() %>% length()
+dbs %>% filter(rnaID == "RNA3141770") %>% select(piRNAdb) %>% deframe %>% as_factor() %>% levels() %>% length()
+dbs %>% filter(rnaID == "RNA3141770") %>% select(pirbase) %>% deframe %>% as_factor() %>% levels() %>% length()
+# how many are only in piRBase
+dbs %>% filter(!is.na(pirbase),is.na(piRNAdb),is.na(dashr_srna) ) %>% group_by(rnaID) %>% n_groups()
+summarized_rnaID <- dbs %>% filter(!is.na(pirbase),is.na(piRNAdb),is.na(dashr_srna) ) %>% 
+  group_by(rnaID) %>% summarise(n = dplyr::n()) %>% arrange(desc(n))
+
+
+# same for long ranges ----
+## create a union of all dbs 
+dashr_db_red <- dashr_db %>% 
+  filter(dashr_type == "piRNA") %>% 
+  select(-dashr_type) %>% 
+  reduce_ranges_directed()
+
+pirbase_red <- pirbase %>% reduce_ranges_directed()
+
+pirnadb_red <- pirnadb %>% reduce_ranges_directed()
+# concat them and reduce
+pirna_DB_union <- c(dashr_db_red, pirbase_red, pirnadb_red) %>% 
+  reduce_ranges_directed()
+## pirbase
+pirbase_red %>% 
+  as_tibble() %>% 
+  group_by(seqnames) %>% 
+  summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
+                                 median=median, Q3=~quantile(., probs = 0.75),
+                                 max=max)) %>% 
+  arrange(as.character(seqnames)) %>% tail(20)
+# evaluating summary statistics we find that most of the regions
+# that are around ~34 base pairs for that reason we will remove 
+# all regions bigger than 39
+
+pirbase_long <- pirbase_red %>% 
+  as_tibble() %>% 
+  filter(width >= 40)
+#dashr
+dashr_db_red %>% 
+  as_tibble() %>% 
+  group_by(seqnames) %>% 
+  summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
+                                 median=median, Q3=~quantile(., probs = 0.75),
+                                 max=max)) %>% 
+  arrange(as.character(seqnames)) %>% tail(20)
+
+dashr_db_Long <- dashr_db_red %>% 
+  as_tibble() %>% 
+  filter(width >= 40)
+#pirnadb
+pirnadb_red %>% 
+  as_tibble() %>% 
+  group_by(seqnames) %>% 
+  summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
+                                 median=median, Q3=~quantile(., probs = 0.75),
+                                 max=max)) %>% 
+  arrange(as.character(seqnames)) %>% tail(20)
+
+pirnadb_long <- pirnadb_red %>% 
+  as_tibble() %>% 
+  filter(width >= 40)
+# concat them and reduce
+pirna_DB_union <- c(as_granges(pirbase_long), as_granges(dashr_db_Long), as_granges(pirnadb_red)) %>% 
+  reduce_ranges_directed() %>%  
+  arrange(start) %>%
+  as_tibble() %>%  
+  mutate(rnaID = 1:length(.$strand) %>%
+  str_c("RNA_cluster", .)) %>% 
+  as_granges()
+
+pirna_DB_union %>% 
+  as_tibble() %>% 
+  group_by(seqnames) %>% 
+  summarise_at(vars(width) ,list(min = min, Q1=~quantile(., probs = 0.25),
+                                 median=median, Q3=~quantile(., probs = 0.75),
+                                 max=max)) %>% 
+  arrange(as.character(seqnames)) %>% tail(20)
+# make the file for the 3 dbds
+#p_DB_U <- pirna_DB_union %>% 
+  join_overlap_left_directed(dashr_db %>% 
+                               filter(dashr_type == "piRNA") %>% 
+                               select(-dashr_type)) %>% 
+  join_overlap_left_directed(pirnadb) %>% 
+  join_overlap_left_directed(pirbase) %>% 
+  join_overlap_left_directed(pirnadb_cl) %>%
+  join_overlap_left_directed(pirna_cl_db)
