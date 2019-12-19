@@ -1072,6 +1072,10 @@ pirna_DB_union %>%
   
   cluster_genes <- annotate_fun(pirna_new)
   
+  piRNA_DBs_Clusters_long <- piRNA_DBs_Clusters_long %>% 
+    as_tibble %>% 
+    inner_join(cluster_genes, by = "rnaID") %>% 
+    write_tsv("all_DB_piRNAClusters_genes_chr_all.txt")
   
   # all entries
   piRNA_DBs_Clusters_long %>% length()
@@ -1091,7 +1095,7 @@ pirna_DB_union %>%
     group_by(rnaID) %>% n_groups()
   # common between the two databases not in clusters but inside exon
   piRNA_DBs_Clusters_long %>% as_tibble() %>% 
-    filter(!is.na(dashr_srna), !is.na(piRNAdb),!is.na(pirbase), is.na(Cluster_Acess), is.na(cl_db), subregion == "inside exon") %>% 
+    filter(!is.na(dashr_srna), !is.na(piRNAdb), is.na(Cluster_Acess), is.na(cl_db), subregion == "inside exon") %>% 
     group_by(rnaID) %>% n_groups()
   # common between the three databases in clusters and inside exon
   dbs %>% filter(!is.na(dashr_srna), !is.na(piRNAdb),!is.na(pirbase), !is.na(Cluster_Acess) | !is.na(cl_db), subregion == "inside exon") %>% group_by(rnaID) %>% n_groups()
