@@ -202,7 +202,7 @@ test_genes_1 <- test_genes_1 %>%
   bind_cols(as_tibble(test1)) %>% 
   dplyr::select(name:subjectHits,rnaID)
 # find how many threads you are going to use -----
-length(p_DB_U_chr[[24]]) %/% 15
+length(p_DB_U_chr[[1]]) %/% 14
 
 (l_chr <- plyr::round_any(length(p_DB_U_chr[[24]]), 100, ceiling)) 
 (l_chr %/% 14)
@@ -442,7 +442,7 @@ p_DB_U %>%
   inner_join(chr_21_Y_1_22_18_20_13_14_19_16_15, by = "rnaID") %>% 
   write_tsv("all_DB_genes_chr_21_Y_1_22_18_20_13_14_19_16_15.txt")
 # annotate for each ----
-annotate_fun <- function(x_1) {
+annotate_fun <- function(x_1) {  
   test_genes_chr <- bplapply(x_1, fun, BPPARAM = mt_param)
   message("bind the ranges")
   x_1 <- bind_ranges(x_1)
@@ -561,6 +561,41 @@ slice_dataframe_fun <- function(n_1,by_n) {
   test_chr
 }
 
+##2nd way to the whole datasets
+slice_dataframe_fun <- function(by_n) {
+  (l_chr <- plyr::round_any(length(pirna_DB_union), by_n, ceiling)) 
+  (l_chr %/% 12)
+  (chunks_chr <- seq(1,l_chr, by = l_chr %/% 12))
+  
+  p_DB_U_chr_1 <- pirna_DB_union[chunks_chr[1]:(chunks_chr[2]-1)]
+  p_DB_U_chr_2 <- pirna_DB_union[chunks_chr[2]:(chunks_chr[3]-1)]
+  p_DB_U_chr_3 <- pirna_DB_union[chunks_chr[3]:(chunks_chr[4]-1)]
+  p_DB_U_chr_4 <- pirna_DB_union[chunks_chr[4]:(chunks_chr[5]-1)]
+  p_DB_U_chr_5 <- pirna_DB_union[chunks_chr[5]:(chunks_chr[6]-1)]
+  p_DB_U_chr_6 <- pirna_DB_union[chunks_chr[6]:(chunks_chr[7]-1)]
+  p_DB_U_chr_7 <- pirna_DB_union[chunks_chr[7]:(chunks_chr[8]-1)]
+  p_DB_U_chr_8 <- pirna_DB_union[chunks_chr[8]:(chunks_chr[9]-1)]
+  p_DB_U_chr_9 <- pirna_DB_union[chunks_chr[9]:(chunks_chr[10]-1)]
+  p_DB_U_chr_10 <- pirna_DB_union[chunks_chr[10]:(chunks_chr[11]-1)]
+  p_DB_U_chr_11 <- pirna_DB_union[chunks_chr[11]:(chunks_chr[12]-1)]
+  p_DB_U_chr_12 <- pirna_DB_union[chunks_chr[12]:length(pirna_DB_union)]
+  
+  test_chr <- list(p_DB_U_chr_1, p_DB_U_chr_2, 
+                   p_DB_U_chr_3, p_DB_U_chr_4,
+                   p_DB_U_chr_5, p_DB_U_chr_6,
+                   p_DB_U_chr_7, p_DB_U_chr_8,
+                   p_DB_U_chr_9, p_DB_U_chr_10,
+                   p_DB_U_chr_11, p_DB_U_chr_12)
+  
+  rm(p_DB_U_chr_1, p_DB_U_chr_2, 
+     p_DB_U_chr_3, p_DB_U_chr_4,
+     p_DB_U_chr_5, p_DB_U_chr_6,
+     p_DB_U_chr_7, p_DB_U_chr_8,
+     p_DB_U_chr_9, p_DB_U_chr_10,
+     p_DB_U_chr_11, p_DB_U_chr_12)
+  
+  test_chr
+}
 
 # chrM ----
 test15_chrM <- slice_dataframe_fun(23,10)
@@ -998,7 +1033,7 @@ pirnadb_long <- pirnadb_red %>%
   as_tibble() %>% 
   filter(width >= 40)
 # concat them and reduce
-pirna_DB_union <- c(as_granges(pirbase_long), as_granges(dashr_db_Long), as_granges(pirnadb_red)) %>% 
+pirna_DB_union <- c(as_granges(pirbase_long), as_granges(dashr_db_Long), as_granges(pirnadb_long)) %>% 
   reduce_ranges_directed() %>%  
   arrange(start) %>%
   as_tibble() %>%  
@@ -1022,3 +1057,45 @@ pirna_DB_union %>%
   join_overlap_left_directed(pirbase) %>% 
   join_overlap_left_directed(pirnadb_cl) %>%
   join_overlap_left_directed(pirna_cl_db)
+  
+  piRNA_DBs_Clusters_long<- pirna_DB_union %>% 
+    join_overlap_left_directed(pirnadb_cl) %>%
+    join_overlap_left_directed(pirna_cl_db) %>% 
+    join_overlap_left_directed(dashr_db %>% 
+                                 filter(dashr_type == "piRNA") %>% 
+                                 select(-dashr_type)) %>% 
+    join_overlap_left_directed(pirnadb)
+  
+  # make the genes with clusters
+  pirna_new <- slice_dataframe_fun(100)
+  mt_param <- MulticoreParam(workers = 12)
+  
+  cluster_genes <- annotate_fun(pirna_new)
+  
+  
+  # all entries
+  piRNA_DBs_Clusters_long %>% length()
+  # all regions 
+  piRNA_DBs_Clusters_long %>% as_tibble() %>% group_by(rnaID) %>% n_groups()
+  # length of the regions
+  piRNA_DBs_Clusters_long %>% as_tibble() %>% select(width) %>% deframe() %>% summary()
+  # common between the two databases
+  piRNA_DBs_Clusters_long %>% as_tibble() %>% 
+    filter(!is.na(dashr_srna), !is.na(piRNAdb)) %>% group_by(rnaID) %>% n_groups()
+  # common between the two databases and 
+  piRNA_DBs_Clusters_long %>% as_tibble() %>% filter(!is.na(Cluster_Acess)) %>% group_by(rnaID) %>% n_groups()
+  # common between the two databases and clusters of piRNADB
+  piRNA_DBs_Clusters_long %>% as_tibble() %>% filter(!is.na(cl_db)) %>% group_by(rnaID) %>% n_groups()
+  # common between the two databases clusterDB and clusters of piRNADB
+  piRNA_DBs_Clusters_long %>% as_tibble() %>% filter(!is.na(dashr_srna), !is.na(piRNAdb), !is.na(cl_db), !is.na(Cluster_Acess)) %>% 
+    group_by(rnaID) %>% n_groups()
+  # common between the two databases not in clusters but inside exon
+  piRNA_DBs_Clusters_long %>% as_tibble() %>% 
+    filter(!is.na(dashr_srna), !is.na(piRNAdb),!is.na(pirbase), is.na(Cluster_Acess), is.na(cl_db), subregion == "inside exon") %>% 
+    group_by(rnaID) %>% n_groups()
+  # common between the three databases in clusters and inside exon
+  dbs %>% filter(!is.na(dashr_srna), !is.na(piRNAdb),!is.na(pirbase), !is.na(Cluster_Acess) | !is.na(cl_db), subregion == "inside exon") %>% group_by(rnaID) %>% n_groups()
+  # common between the three databases in clusters and inside introns
+  dbs %>% filter(!is.na(dashr_srna), !is.na(piRNAdb),!is.na(pirbase), !is.na(Cluster_Acess) | !is.na(cl_db), subregion == "inside intron") %>% group_by(rnaID)
+  # regions found in piRBase
+  dbs %>% filter(!is.na(pirbase)) %>% group_by(rnaID) %>% n_groups()
