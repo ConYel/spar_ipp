@@ -1077,8 +1077,29 @@ pirna_DB_union %>%
     inner_join(cluster_genes, by = "rnaID") %>% 
     write_tsv("all_DB_piRNAClusters_genes_chr_all.txt")
   
+  
+  piRNA_DBs_Clusters_long <- read_tsv("/home/0/IPP/spar_ipp/all_DB_piRNAClusters_genes_chr_all.txt", col_names = TRUE, 
+           col_types = cols(
+             .default = col_character(),
+             start = col_double(),
+             end = col_double(),
+             width = col_double(),
+             #Cluster_Acess = col_logical(),
+             #cl_db = col_logical(),
+             name = col_logical(),
+             annotation = col_logical(),
+             distance = col_double(),
+             insideDistance = col_double(),
+             exonnumber = col_double(),
+             nexons = col_double(),
+             geneL = col_double(),
+             #codingL = col_logical(),
+             Geneid = col_double(),
+             subjectHits = col_double()
+           ))
+  
   # all entries
-  piRNA_DBs_Clusters_long %>% length()
+  piRNA_DBs_Clusters_long %>% as_tibble() %>% nrow()
   # all regions 
   piRNA_DBs_Clusters_long %>% as_tibble() %>% group_by(rnaID) %>% n_groups()
   # length of the regions
@@ -1098,7 +1119,7 @@ pirna_DB_union %>%
     filter(!is.na(dashr_srna), !is.na(piRNAdb), is.na(Cluster_Acess), is.na(cl_db), subregion == "inside exon") %>% 
     group_by(rnaID) %>% n_groups()
   # common between the three databases in clusters and inside exon
-  dbs %>% filter(!is.na(dashr_srna), !is.na(piRNAdb),!is.na(pirbase), !is.na(Cluster_Acess) | !is.na(cl_db), subregion == "inside exon") %>% group_by(rnaID) %>% n_groups()
+  piRNA_DBs_Clusters_long %>% filter(!is.na(dashr_srna), !is.na(piRNAdb), !is.na(Cluster_Acess) | !is.na(cl_db), subregion == "inside exon") %>% group_by(rnaID) %>% n_groups()
   # common between the three databases in clusters and inside introns
   dbs %>% filter(!is.na(dashr_srna), !is.na(piRNAdb),!is.na(pirbase), !is.na(Cluster_Acess) | !is.na(cl_db), subregion == "inside intron") %>% group_by(rnaID)
   # regions found in piRBase
