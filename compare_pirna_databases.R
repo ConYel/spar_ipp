@@ -998,6 +998,34 @@ dashr_db_piRNA %>%
   as_tibble() %>% 
   write_tsv("dashr_snRNA_plus_cpirna.txt")
 
+piRNA_dashr <- dashr_db_piRNA %>% 
+  bind_ranges(as_granges(dbs_more_than_1))
+
+piRNA_dashr %>% filter(dashr_type == "piRNA") %>% 
+  as_tibble() %>%
+  distinct(rnaID, .keep_all = TRUE) %>% 
+  mutate(pir_coor = str_c(.$seqnames, .$start, .$end, .$strand, .$rnaID, sep = ":")) %>% 
+  select(seqnames:strand, pir_coor, rnaID) %>% 
+  as_granges() %>% 
+  select(name = "pir_coor") %>% 
+  write_bed("hg38.fulltable.no_mRNA_no_lncRNA_piRNAonly.unique_LOC_newDB.bed")
+
+pirna_finalDB <- read_bed("hg38.fulltable.no_mRNA_no_lncRNA_piRNAonly.unique_LOC_newDB.bed") %>% 
+  as_tibble() %>% 
+  mutate(score = "piRNA",
+         start = (start-1)) %>% 
+  select(seqnames, start, end, name, score, strand) %>% 
+  write_tsv("hg38.fulltable.no_mRNA_no_lncRNA_piRNAonly.unique_LOC_pirDB.bed", col_names = FALSE)
+
+dashr_finalDB <- read_tsv("hg38.fulltable.no_mRNA_no_lncRNA.unique_LOC.bed", 
+                          col_names = c("seqnames", "start", "end", "name", "score", "strand")) %>% 
+  filter(!score == "piRNA")
+
+dashr_finalDB %>% bind_rows(pirna_finalDB) %>% arrange(seqnames,start) %>% 
+  write_tsv("hg38.fulltable.no_mRNA_no_lncRNA.unique_LOC_pirDB.bed")
+  
+# random -----
+  
 # same for long ranges ----
 ## create a union of all dbs 
 dashr_db_red <- dashr_db %>% 
