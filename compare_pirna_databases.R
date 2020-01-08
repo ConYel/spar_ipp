@@ -938,7 +938,9 @@ dbs <- read_tsv("/home/0/IPP/spar_ipp/all_DB_genes_chr_all.txt", col_names = TRU
                   #codingL = col_logical(),
                   Geneid = col_double(),
                   subjectHits = col_double()
-                ))
+                )) %>% 
+  rename(strand = "strand.x") %>% 
+  select(-strand.y)
 
 
 # all entries
@@ -976,9 +978,25 @@ dbs %>% filter(rnaID == "RNA3141770") %>% select(piRNAdb) %>% deframe %>% as_fac
 dbs %>% filter(rnaID == "RNA3141770") %>% select(pirbase) %>% deframe %>% as_factor() %>% levels() %>% length()
 # how many are only in piRBase
 dbs %>% filter(!is.na(pirbase),is.na(piRNAdb),is.na(dashr_srna) ) %>% group_by(rnaID) %>% n_groups()
+
 summarized_rnaID <- dbs %>% filter(!is.na(pirbase),is.na(piRNAdb),is.na(dashr_srna) ) %>% 
   group_by(rnaID) %>% summarise(n = dplyr::n()) %>% arrange(desc(n))
+# if we apply a filter about entries
+map(c(0,1,2,3,4,5), ~ summarized_rnaID %>% filter(n > .x) %>% 
+      nrow() %>% set_names(.x)) 
 
+dbs_1_and_more <- summarized_rnaID %>% filter(n <= 1) 
+
+dbs_more_than_1 <- dbs %>% 
+  filter(!rnaID %in% dbs_1_and_more$rnaID) %>%
+  mutate(dashr_type = "piRNA",
+         rnaID = str_replace(rnaID,"RNA","cpiRNA")) %>% 
+  write_tsv("all_DB_genes_chr_more_1.txt")
+
+dashr_db_piRNA %>% 
+  bind_ranges(as_granges(dbs_more_than_1)) %>% 
+  as_tibble() %>% 
+  write_tsv("dashr_snRNA_plus_cpirna.txt")
 
 # same for long ranges ----
 ## create a union of all dbs 
@@ -1124,3 +1142,14 @@ pirna_DB_union %>%
   dbs %>% filter(!is.na(dashr_srna), !is.na(piRNAdb),!is.na(pirbase), !is.na(Cluster_Acess) | !is.na(cl_db), subregion == "inside intron") %>% group_by(rnaID)
   # regions found in piRBase
   dbs %>% filter(!is.na(pirbase)) %>% group_by(rnaID) %>% n_groups()
+  
+  
+  
+  
+  
+# check dashr smallRNAs and new pirna db ------
+  
+  
+  
+  
+  
