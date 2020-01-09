@@ -1022,7 +1022,7 @@ dashr_finalDB <- read_tsv("hg38.fulltable.no_mRNA_no_lncRNA.unique_LOC.bed",
   filter(!score == "piRNA")
 
 dashr_finalDB %>% bind_rows(pirna_finalDB) %>% arrange(seqnames,start) %>% 
-  write_tsv("hg38.fulltable.no_mRNA_no_lncRNA.unique_LOC_pirDB.bed")
+  write_tsv("hg38.fulltable.no_mRNA_no_lncRNA.unique_LOC_pirDB.bed", col_names = FALSE)
   
 # random -----
   
