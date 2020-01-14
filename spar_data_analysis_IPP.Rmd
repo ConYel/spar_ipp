@@ -23,14 +23,14 @@ todate <- format(Sys.time(), "%d_%b_%Y")
 ```
 ## create the dir for the analysis
 ```{r}
-my_exp <- "COLO205_IPP_not_annot"
+my_exp <- "IPP_cpiRNA"
 dir.create(str_glue("./{my_exp}_analysis"))
 dat_path <- str_glue("{my_exp}_analysis")
 ```
 
 ## import data and make dataframe
 ```{r create_the_df}
-path <- "/home/0/Project_piRNA/3_IPP_COLO205_SPAR_results/"
+path <- "/home/0/results_file/"
 smallRNA_files <- dir(path, full.names = TRUE,
                       pattern = "smRNA_gene_expression.xls",
                       recursive = TRUE)
@@ -52,8 +52,8 @@ dt <- DT %>% group_by(file) %>% select(-RPM) %>%
 
 # clean the colnames
 names(dt)[3:length(names(dt))] <- names(dt)[3:length(names(dt))] %>%
-  str_remove(".+/3_IPP_PIWIL1/SPAR_results/") %>%
   str_remove(".trimmed_.+") %>% 
+  str_remove(".+/") %>%
   str_remove(pattern = "COLO205_IPP_") %>%
   str_remove(pattern = "noAb_")
 # 1.1b load the not annot matrix for DE analysis  -----
@@ -91,7 +91,7 @@ dt %>% write_tsv(str_glue("{dat_path}/raw_reads_{todate}_{my_exp}_SPAR.txt"))
 ## Perform various Filtering Methods: EdgeR, NOIseq
 ```{r}
 # load dataset ----
-DT <- fread(list.files(path = dat_path, pattern = "raw", full.names = TRUE ))
+dt <- fread(list.files(path = dat_path, pattern = "raw", full.names = TRUE ))
 suppressPackageStartupMessages({
   library('edgeR')
   library('NOISeq')
@@ -134,7 +134,7 @@ NOISeq_filt <- sapply(noiL, function(x) NOISeq::filtered.data(mat,
         factor = targets_file$group,
         norm = FALSE, 
         method = x, cv.cutoff=100, cpm=1), simplify = FALSE, USE.NAMES = TRUE)
- # create the design matrix  -----
+# create the design matrix  -----
 design <- model.matrix(~0 + targets_file$group + targets_file$batch)
 colnames(design) <- colnames(design) %>% 
   str_remove("targets_file\\$") %>% 
@@ -614,15 +614,15 @@ dev.off()
 # checking for DEs between both abs ------
 ## voom ---
 C_IP <- voom_res_C_vs_Ctl %>% 
-  filter(adj.P.Val < 0.1,
+  filter(adj.P.Val < 0.05,
          logFC > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","C_")})
 N_IP <- voom_res_N_vs_Ctl %>% 
-  filter(adj.P.Val < 0.1,
+  filter(adj.P.Val < 0.05,
          logFC > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","N_")})
 INPUT_IP <- voom_res_INPUT_vs_Ctl %>% 
-  filter(adj.P.Val < 0.1,
+  filter(adj.P.Val < 0.05,
          logFC > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","INPUT_")})
 
@@ -648,10 +648,12 @@ C_D2 <- DEseq2_res_C_Ab_vs_Control %>%
   filter(padj < 0.05,
          log2FoldChange > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","C_")})
+
 N_D2 <- DEseq2_res_N_Ab_vs_Control %>% 
   filter(padj < 0.05,
          log2FoldChange > 1.5) %>% 
   rename_if(is.numeric,function(x){str_replace(x,"^","N_")})
+
 INPUT_D2 <- DEseq2_res_INPUT_vs_Control %>% 
   filter(padj < 0.05,
          log2FoldChange > 1.5) %>% 
@@ -659,6 +661,7 @@ INPUT_D2 <- DEseq2_res_INPUT_vs_Control %>%
 
 INPUT_D2 %>% inner_join(C_D2) %>% select(GeneID)
 INPUT_D2 %>% inner_join(N_D2) %>% select(GeneID)
+C_D2 %>% inner_join(N_D2)  %>% anti_join(INPUT_D2) %>% select(GeneID)
 DEseq_IPP <- C_D2 %>% 
   inner_join(N_D2) %>%
   filter(!GeneID %in% INPUT_D2$GeneID) %>% 
